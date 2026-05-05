@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum KycStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum WalletAccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum JournalType {
+  DEPOSIT
+  TRANSFER
+  WITHDRAWAL_FREEZE
+  WITHDRAWAL_RELEASE
+  WITHDRAWAL_CONFIRM
+  ADJUSTMENT
+}
+
+enum DepositStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum JournalStatus {
+  POSTED
+  REVERSED
+}
+
+enum LedgerEntryDirection {
+  DEBIT
+  CREDIT
+}
+
+enum TransferStatus {
+  SUCCESS
+  FAILED
+}
+
+enum ReviewStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WithdrawStatus {
+  PENDING_REVIEW
+  READY_FOR_SIGNING
+  REJECTED
+  CANCELED
+  SIGNED
+  CONFIRMED
+  FAILED
+}
+
+enum AuditActorType {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  telegramUserId     String          @unique
+  username           String?
+  firstName          String?
+  lastName           String?
+  photoUrl           String?
+  role               UserRole        @default(USER)
+  status             UserStatus      @default(ACTIVE)
+  kycStatus          KycStatus       @default(UNVERIFIED)
+  authSessions       AuthSession[]
+  walletAccounts     WalletAccount[]
+  outgoingTransfers  TransferOrder[] @relation("OutgoingTransfers")
+  incomingTransfers  TransferOrder[] @relation("IncomingTransfers")
+  withdrawOrders     WithdrawOrder[] @relation("UserWithdrawOrders")
+  reviewedWithdraws  WithdrawOrder[] @relation("ReviewedWithdrawOrders")
+  depositOrders      DepositOrder[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+model AuthSession {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress        String?
+  userAgent        String?
+  telegramAuthDate DateTime?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+}
+
+model WalletAccount {
+  id               String              @id @default(cuid())
+  userId           String
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetCode        String
+  network          String
+  availableBalance Decimal             @default(0) @db.Decimal(36, 18)
+  frozenBalance    Decimal             @default(0) @db.Decimal(36, 18)
+  status           WalletAccountStatus @default(ACTIVE)
+  addresses        WalletAddress[]
+  ledgerEntries    LedgerEntry[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([userId, assetCode, network])
+  @@index([assetCode, network])
+}
+
+model WalletAddress {
+  id              String        @id @default(cuid())
+  walletAccountId String
+  walletAccount   WalletAccount @relation(fields: [walletAccountId], references: [id], onDelete: Cascade)
+  address         String        @unique
+  memo            String?
+  isPrimary       Boolean       @default(false)
+  lastScannedLt   String        @default("0")
+  createdAt       DateTime      @default(now())
+}
+
+model LedgerJournal {
+  id           String        @id @default(cuid())
+  type         JournalType
+  referenceType String
+  referenceId  String
+  description  String?
+  metadata     Json?
+  status       JournalStatus @default(POSTED)
+  entries      LedgerEntry[]
+  createdAt    DateTime      @default(now())
+
+  @@index([referenceType, referenceId])
+}
+
+model LedgerEntry {
+  id                String               @id @default(cuid())
+  journalId         String
+  journal           LedgerJournal        @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  walletAccountId   String?
+  walletAccount     WalletAccount?       @relation(fields: [walletAccountId], references: [id], onDelete: SetNull)
+  ledgerAccountCode String
+  direction         LedgerEntryDirection
+  assetCode         String
+  network           String
+  amount            Decimal              @db.Decimal(36, 18)
+  createdAt         DateTime             @default(now())
+
+  @@index([walletAccountId])
+  @@index([ledgerAccountCode])
+}
+
+model TransferOrder {
+  id         String         @id @default(cuid())
+  fromUserId String
+  fromUser   User           @relation("OutgoingTransfers", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  toUser     User           @relation("IncomingTransfers", fields: [toUserId], references: [id], onDelete: Cascade)
+  assetCode  String
+  network    String
+  amount     Decimal        @db.Decimal(36, 18)
+  fee        Decimal        @default(0) @db.Decimal(36, 18)
+  bizNo      String
+  status     TransferStatus @default(SUCCESS)
+  note       String?
+  journalId  String?        @unique
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([fromUserId, bizNo])
+  @@index([toUserId, createdAt])
+}
+
+model WithdrawOrder {
+  id                   String         @id @default(cuid())
+  userId               String
+  user                 User           @relation("UserWithdrawOrders", fields: [userId], references: [id], onDelete: Cascade)
+  assetCode            String
+  network              String
+  toAddress            String
+  amount               Decimal        @db.Decimal(36, 18)
+  fee                  Decimal        @db.Decimal(36, 18)
+  totalAmount          Decimal        @db.Decimal(36, 18)
+  note                 String?
+  requiresManualReview Boolean        @default(false)
+  reviewStatus         ReviewStatus   @default(PENDING)
+  status               WithdrawStatus @default(PENDING_REVIEW)
+  reviewerId           String?
+  reviewer             User?          @relation("ReviewedWithdrawOrders", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewerNote         String?
+  reviewedAt           DateTime?
+  txHash               String?
+  freezeJournalId      String?        @unique
+  releaseJournalId     String?        @unique
+  confirmJournalId     String?        @unique
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, reviewStatus])
+}
+
+model DepositOrder {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetCode   String
+  network     String
+  fromAddress String?
+  amount      Decimal       @db.Decimal(36, 18)
+  txHash      String?       @unique
+  note        String?
+  status      DepositStatus @default(PENDING)
+  journalId   String?       @unique
+  creditedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model AuditLog {
+  id           String         @id @default(cuid())
+  actorType    AuditActorType
+  actorUserId  String?
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime       @default(now())
+
+  @@index([resourceType, resourceId])
+}
