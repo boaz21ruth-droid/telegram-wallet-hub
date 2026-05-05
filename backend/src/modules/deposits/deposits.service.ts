@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AuditActorType, DepositStatus, WalletAccountStatus } from "@prisma/client";
+import { AuditActorType, DepositStatus, Prisma, WalletAccountStatus } from "@prisma/client";
 
 import { getSupportedAssetOrThrow } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
@@ -229,7 +229,8 @@ export class DepositsService {
     const amount = parsePositiveDecimal(dto.amount);
     getSupportedAssetOrThrow(dto.assetCode, dto.network);
 
-    return this.prisma.$transaction(async (tx) => {
+    try {
+    return await this.prisma.$transaction(async (tx) => {
       // Idempotency: if already credited return existing record
       const existing = await tx.depositOrder.findUnique({ where: { txHash: dto.txHash } });
       if (existing) return existing;
@@ -240,6 +241,11 @@ export class DepositsService {
       if (!walletAccount) throw new NotFoundException("Wallet account not found");
       if (walletAccount.status !== WalletAccountStatus.ACTIVE) {
         throw new BadRequestException("Wallet account is not active");
+      }
+      if (walletAccount.assetCode !== dto.assetCode || walletAccount.network !== dto.network) {
+        throw new BadRequestException(
+          `Wallet account asset mismatch: expected ${dto.assetCode}/${dto.network}`,
+        );
       }
 
       const user = await tx.user.findUnique({ where: { id: walletAccount.userId } });
@@ -295,5 +301,17 @@ export class DepositsService {
 
       return { ...order, journalId: journal.id };
     });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existing = await this.prisma.depositOrder.findUnique({
+          where: { txHash: dto.txHash },
+        });
+        if (existing) return existing;
+      }
+      throw error;
+    }
   }
 }
