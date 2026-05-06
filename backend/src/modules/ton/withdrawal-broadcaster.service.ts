@@ -58,16 +58,20 @@ export class WithdrawalBroadcasterService {
           `Broadcasting withdrawal ${order.id}: ${order.amount} ${order.assetCode} → ${order.toAddress}`,
         );
 
-        const txHash =
-          order.assetCode === "TON"
-            ? await this.hotWallet.broadcastTonTransfer(
-                order.toAddress,
-                order.amount.toString(),
-              )
-            : await this.hotWallet.broadcastUsdtTransfer(
-                order.toAddress,
-                order.amount.toString(),
-              );
+        let txHash: string;
+        if (order.assetCode === "TON") {
+          txHash = await this.hotWallet.broadcastTonTransfer(
+            order.toAddress,
+            order.amount.toString(),
+          );
+        } else if (order.assetCode === "USDT") {
+          txHash = await this.hotWallet.broadcastUsdtTransfer(
+            order.toAddress,
+            order.amount.toString(),
+          );
+        } else {
+          throw new Error(`Unsupported assetCode for on-chain withdrawal: ${order.assetCode}`);
+        }
 
         await this.withdrawalsService.signWithdrawalBySystem(order.id, txHash);
         this.logger.log(`Withdrawal ${order.id} signed — txHash=${txHash}`);
@@ -107,6 +111,7 @@ export class WithdrawalBroadcasterService {
    * Verify that `txHash` appears in the hot wallet's recent outgoing transactions.
    */
   private async isTransactionConfirmed(txHash: string): Promise<boolean> {
+    if (!this.hotWallet.isEnabled) return false;
     const { TONCENTER_API_URL, TONCENTER_API_KEY } = env();
     const hotWalletAddr = this.hotWallet.address.toString({ urlSafe: true, bounceable: false });
 
