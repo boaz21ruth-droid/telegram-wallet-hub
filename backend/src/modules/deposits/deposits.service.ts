@@ -3,6 +3,7 @@ import { AuditActorType, DepositStatus, Prisma, WalletAccountStatus } from "@pri
 
 import { getSupportedAssetOrThrow } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { TelegramNotificationService } from "../../common/telegram/telegram-notification.service";
 import { AuthenticatedUser } from "../../common/types/authenticated-user";
 import { parsePositiveDecimal } from "../../common/utils/decimal.util";
 import { LedgerService } from "../ledger/ledger.service";
@@ -12,6 +13,7 @@ export class DepositsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ledgerService: LedgerService,
+    private readonly telegram: TelegramNotificationService,
   ) {}
 
   /**
@@ -124,11 +126,14 @@ export class DepositsService {
     const amount = parsePositiveDecimal(dto.amount);
     getSupportedAssetOrThrow(dto.assetCode, dto.network);
 
-    return this.prisma.$transaction(async (tx) => {
+    let notifyTelegramUserId: string | null = null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { telegramUserId: dto.telegramUserId },
       });
       if (!user) throw new NotFoundException("User not found");
+      notifyTelegramUserId = user.telegramUserId;
 
       const walletAccount = await tx.walletAccount.findUnique({
         where: {
@@ -190,6 +195,15 @@ export class DepositsService {
 
       return { ...order, journalId: journal.id };
     });
+
+    if (notifyTelegramUserId) {
+      this.telegram.sendMessage(
+        notifyTelegramUserId,
+        this.telegram.msgDepositCredited(dto.amount, dto.assetCode),
+      );
+    }
+
+    return result;
   }
 
   async listUserDeposits(userId: string, limit: number, offset: number) {
@@ -229,8 +243,10 @@ export class DepositsService {
     const amount = parsePositiveDecimal(dto.amount);
     getSupportedAssetOrThrow(dto.assetCode, dto.network);
 
+    let notifyTelegramUserId: string | null = null;
+
     try {
-    return await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Idempotency: if already credited return existing record
       const existing = await tx.depositOrder.findUnique({ where: { txHash: dto.txHash } });
       if (existing) return existing;
@@ -250,6 +266,7 @@ export class DepositsService {
 
       const user = await tx.user.findUnique({ where: { id: walletAccount.userId } });
       if (!user) throw new NotFoundException("User not found");
+      notifyTelegramUserId = user.telegramUserId;
 
       await tx.walletAccount.update({
         where: { id: walletAccount.id },
@@ -301,6 +318,15 @@ export class DepositsService {
 
       return { ...order, journalId: journal.id };
     });
+
+    if (notifyTelegramUserId) {
+      this.telegram.sendMessage(
+        notifyTelegramUserId,
+        this.telegram.msgDepositCredited(dto.amount, dto.assetCode),
+      );
+    }
+
+    return result;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
