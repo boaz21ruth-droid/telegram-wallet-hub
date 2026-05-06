@@ -58,6 +58,7 @@ export class HotWalletService implements OnModuleInit {
    * Returns the on-chain txHash once the external message is processed (≤30 s).
    */
   async broadcastTonTransfer(toAddress: string, amount: string): Promise<string> {
+    this.assertPositiveAmount(amount);
     this.assertEnabled();
     const contract = this.client.open(this.wallet);
     const seqno = await contract.getSeqno();
@@ -82,6 +83,7 @@ export class HotWalletService implements OnModuleInit {
    * Returns the on-chain txHash once processed.
    */
   async broadcastUsdtTransfer(toAddress: string, amount: string): Promise<string> {
+    this.assertPositiveAmount(amount);
     this.assertEnabled();
     const jettonWalletAddr = await this.getUsdtJettonWalletAddress();
     const contract = this.client.open(this.wallet);
@@ -130,6 +132,10 @@ export class HotWalletService implements OnModuleInit {
       if (currentSeqno > sentSeqno) break;
     }
 
+    if (Date.now() >= deadline) {
+      throw new Error("Timed out (30s) waiting for seqno to advance after broadcast");
+    }
+
     // Fetch the hot wallet's most recent transactions to find our outgoing tx
     const txs = await this.client.getTransactions(this.hotWalletAddress, { limit: 5 });
     if (!txs.length) throw new Error("Could not find broadcast transaction on chain");
@@ -163,6 +169,13 @@ export class HotWalletService implements OnModuleInit {
   private assertEnabled() {
     if (!this.enabled) {
       throw new Error("Hot wallet is not configured (TON_HOT_WALLET_MNEMONIC missing)");
+    }
+  }
+
+  private assertPositiveAmount(amount: string) {
+    const n = parseFloat(amount);
+    if (!isFinite(n) || n <= 0) {
+      throw new Error(`Invalid transfer amount: ${amount}`);
     }
   }
 }
