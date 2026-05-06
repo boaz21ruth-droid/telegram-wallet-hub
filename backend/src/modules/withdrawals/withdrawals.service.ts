@@ -4,12 +4,14 @@ import {
   Prisma,
   ReviewStatus,
   WalletAccountStatus,
+  WithdrawOrder,
   WithdrawStatus,
 } from "@prisma/client";
 
 import { env } from "../../config/env";
 import { getSupportedAssetOrThrow } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { TelegramNotificationService } from "../../common/telegram/telegram-notification.service";
 import { AuthenticatedUser } from "../../common/types/authenticated-user";
 import { parseDecimal, parsePositiveDecimal } from "../../common/utils/decimal.util";
 import { LedgerService } from "../ledger/ledger.service";
@@ -19,10 +21,12 @@ export class WithdrawalsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ledgerService: LedgerService,
+    private readonly telegram: TelegramNotificationService,
   ) {}
 
   async createWithdrawal(
     userId: string,
+    telegramUserId: string,
     dto: {
       assetCode: string;
       network: string;
@@ -38,7 +42,7 @@ export class WithdrawalsService {
     const reviewThreshold = parseDecimal(env().WITHDRAW_MANUAL_REVIEW_THRESHOLD, "WITHDRAW_MANUAL_REVIEW_THRESHOLD");
     const requiresManualReview = amount.gt(reviewThreshold);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const walletAccount = await tx.walletAccount.findUnique({
         where: {
           userId_assetCode_network: {
@@ -110,6 +114,13 @@ export class WithdrawalsService {
         },
       });
     });
+
+    this.telegram.sendMessage(
+      telegramUserId,
+      this.telegram.msgWithdrawalCreated(dto.amount, dto.assetCode, dto.toAddress),
+    );
+
+    return result;
   }
 
   async listOrders(userId: string) {
@@ -160,7 +171,9 @@ export class WithdrawalsService {
   }
 
   async approveReview(orderId: string, adminUser: AuthenticatedUser, note?: string) {
-    return this.prisma.$transaction(async (tx) => {
+    let capturedOrder: WithdrawOrder | null = null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.withdrawOrder.findUnique({
         where: { id: orderId },
       });
@@ -172,6 +185,8 @@ export class WithdrawalsService {
       if (order.status !== WithdrawStatus.PENDING_REVIEW || order.reviewStatus !== ReviewStatus.PENDING) {
         throw new BadRequestException("Withdrawal is not waiting for manual review");
       }
+
+      capturedOrder = order;
 
       const updated = await tx.withdrawOrder.update({
         where: { id: order.id },
@@ -199,10 +214,29 @@ export class WithdrawalsService {
 
       return updated;
     });
+
+    if (capturedOrder) {
+      const order = capturedOrder as WithdrawOrder;
+      this.prisma.user
+        .findUnique({ where: { id: order.userId }, select: { telegramUserId: true } })
+        .then((u) => {
+          if (u) {
+            this.telegram.sendMessage(
+              u.telegramUserId,
+              this.telegram.msgWithdrawalApproved(order.amount.toString(), order.assetCode),
+            );
+          }
+        })
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   async rejectReview(orderId: string, adminUser: AuthenticatedUser, note?: string) {
-    return this.prisma.$transaction(async (tx) => {
+    let capturedOrder: WithdrawOrder | null = null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.withdrawOrder.findUnique({
         where: { id: orderId },
       });
@@ -214,6 +248,8 @@ export class WithdrawalsService {
       if (order.status !== WithdrawStatus.PENDING_REVIEW || order.reviewStatus !== ReviewStatus.PENDING) {
         throw new BadRequestException("Withdrawal is not waiting for manual review");
       }
+
+      capturedOrder = order;
 
       const walletAccount = await tx.walletAccount.findUnique({
         where: {
@@ -284,6 +320,23 @@ export class WithdrawalsService {
 
       return updated;
     });
+
+    if (capturedOrder) {
+      const order = capturedOrder as WithdrawOrder;
+      this.prisma.user
+        .findUnique({ where: { id: order.userId }, select: { telegramUserId: true } })
+        .then((u) => {
+          if (u) {
+            this.telegram.sendMessage(
+              u.telegramUserId,
+              this.telegram.msgWithdrawalRejected(order.amount.toString(), order.assetCode, note),
+            );
+          }
+        })
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   /**
