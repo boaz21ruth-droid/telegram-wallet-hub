@@ -4,6 +4,7 @@ import { env } from "../../config/env";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { WithdrawalsService } from "../withdrawals/withdrawals.service";
 import { HotWalletService } from "./hot-wallet.service";
+import { TelegramNotificationService } from "../../common/telegram/telegram-notification.service";
 
 @Injectable()
 export class WithdrawalBroadcasterService {
@@ -15,6 +16,7 @@ export class WithdrawalBroadcasterService {
     private readonly prisma: PrismaService,
     private readonly hotWallet: HotWalletService,
     private readonly withdrawalsService: WithdrawalsService,
+    private readonly telegram: TelegramNotificationService,
   ) {}
 
   /** Pick up READY_FOR_SIGNING orders and broadcast them on-chain. */
@@ -98,6 +100,22 @@ export class WithdrawalBroadcasterService {
         if (confirmed) {
           await this.withdrawalsService.confirmWithdrawalBySystem(order.id);
           this.logger.log(`Withdrawal ${order.id} confirmed on-chain`);
+          // Fire-and-forget: look up user's telegramUserId and notify
+          this.prisma.user
+            .findUnique({ where: { id: order.userId }, select: { telegramUserId: true } })
+            .then((u) => {
+              if (u) {
+                this.telegram.sendMessage(
+                  u.telegramUserId,
+                  this.telegram.msgWithdrawalConfirmed(
+                    order.amount.toString(),
+                    order.assetCode,
+                    order.txHash ?? undefined,
+                  ),
+                );
+              }
+            })
+            .catch((err) => this.logger.warn(`Notify withdrawal confirmation failed: ${err}`));
         }
       } catch (err) {
         this.logger.error(
