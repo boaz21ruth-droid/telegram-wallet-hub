@@ -23,6 +23,8 @@ const envSchema = z.object({
   USDT_JETTON_MASTER_ADDRESS: z
     .string()
     .default("EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"), // USDT mainnet
+  // Hot wallet for on-chain withdrawals (24-word BIP39 mnemonic, space-separated)
+  TON_HOT_WALLET_MNEMONIC: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
