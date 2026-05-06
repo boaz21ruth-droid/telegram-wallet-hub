@@ -16,10 +16,12 @@ import { DepositsModule } from "./modules/deposits/deposits.module";
 import { TransfersModule } from "./modules/transfers/transfers.module";
 import { WithdrawalsModule } from "./modules/withdrawals/withdrawals.module";
 import { TonModule } from "./modules/ton/ton.module";
+import { TelegramNotificationModule } from "./common/telegram/telegram-notification.module";
 
 @Module({
   imports: [
     PrismaModule,
+    TelegramNotificationModule,
     JwtModule.register({
       global: true,
       secret: env().JWT_SECRET,
