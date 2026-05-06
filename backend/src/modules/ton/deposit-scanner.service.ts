@@ -70,17 +70,13 @@ export class DepositScannerService {
             this.logger.log(
               `Credited ${deposit.amount} ${deposit.assetCode} to walletAccount=${addr.walletAccount.id} txHash=${deposit.txHash}`,
             );
+            const depositLt = BigInt(deposit.lt);
+            if (depositLt > maxLt) maxLt = depositLt;
           } catch (err: unknown) {
             this.logger.error(
               `Failed to credit txHash=${deposit.txHash}: ${err instanceof Error ? err.message : err}`,
             );
           }
-        }
-
-        // Advance cursor to the highest LT seen in this batch
-        if (deposits.length > 0) {
-          const highestLt = BigInt(deposits[0].lt); // array is newest-first
-          if (highestLt > maxLt) maxLt = highestLt;
         }
 
         if (maxLt > BigInt(addr.lastScannedLt)) {
