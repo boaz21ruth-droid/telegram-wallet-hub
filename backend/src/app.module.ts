@@ -16,6 +16,7 @@ import { DepositsModule } from "./modules/deposits/deposits.module";
 import { TransfersModule } from "./modules/transfers/transfers.module";
 import { WithdrawalsModule } from "./modules/withdrawals/withdrawals.module";
 import { TonModule } from "./modules/ton/ton.module";
+import { Trc20Module } from "./modules/trc20/trc20.module";
 import { TelegramNotificationModule } from "./common/telegram/telegram-notification.module";
 
 @Module({
@@ -39,6 +40,7 @@ import { TelegramNotificationModule } from "./common/telegram/telegram-notificat
     WithdrawalsModule,
     ScheduleModule.forRoot(),
     TonModule,
+    Trc20Module,
   ],
   providers: [
     {

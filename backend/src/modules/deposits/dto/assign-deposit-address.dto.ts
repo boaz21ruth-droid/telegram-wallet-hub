@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
-import { IsTonAddress } from "../../../common/validators/is-ton-address.validator";
+import { IsAddressForNetwork } from "../../../common/validators/is-address-for-network.validator";
 
 export class AssignDepositAddressDto {
   @IsString()
@@ -14,7 +14,7 @@ export class AssignDepositAddressDto {
   @IsNotEmpty()
   network!: string;
 
-  @IsTonAddress()
+  @IsAddressForNetwork()
   address!: string;
 
   @IsOptional()

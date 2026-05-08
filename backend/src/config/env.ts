@@ -25,6 +25,12 @@ const envSchema = z.object({
     .default("EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"), // USDT mainnet
   // Hot wallet for on-chain withdrawals (24-word BIP39 mnemonic, space-separated)
   TON_HOT_WALLET_MNEMONIC: z.string().optional(),
+  // TRC20 (Tron) chain integration
+  TRONGRID_API_URL: z.string().url().default("https://api.trongrid.io"),
+  TRONGRID_API_KEY: z.string().optional(),
+  TRC20_USDT_CONTRACT: z.string().default("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"),
+  // BIP44 mnemonic for TRC20; index 0 = hot wallet (withdrawals), 1+ = deposit addresses
+  TRC20_HOT_WALLET_MNEMONIC: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

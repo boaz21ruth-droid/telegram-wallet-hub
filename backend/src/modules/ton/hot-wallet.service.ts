@@ -16,6 +16,7 @@ export class HotWalletService implements OnModuleInit {
   private client!: TonClient;
   private wallet!: WalletContractV4;
   private secretKey!: Buffer;
+  private publicKey!: Buffer;
   private hotWalletAddress!: Address;
   /** Cached Jetton wallet address for the hot wallet's USDT */
   private usdtJettonWalletAddress: Address | null = null;
@@ -38,6 +39,7 @@ export class HotWalletService implements OnModuleInit {
 
     const keyPair = await mnemonicToPrivateKey(TON_HOT_WALLET_MNEMONIC.trim().split(/\s+/));
     this.secretKey = Buffer.from(keyPair.secretKey);
+    this.publicKey = Buffer.from(keyPair.publicKey);
     this.wallet = WalletContractV4.create({ publicKey: keyPair.publicKey, workchain: 0 });
     this.hotWalletAddress = this.wallet.address;
     this.enabled = true;
@@ -51,6 +53,16 @@ export class HotWalletService implements OnModuleInit {
 
   get address(): Address {
     return this.hotWalletAddress;
+  }
+
+  deriveDepositAddress(index: number): string {
+    if (!this.enabled) throw new Error("TON_HOT_WALLET_MNEMONIC not configured");
+    const depositWallet = WalletContractV4.create({
+      workchain: 0,
+      publicKey: this.publicKey,
+      walletId: index,
+    });
+    return depositWallet.address.toString({ urlSafe: true, bounceable: false });
   }
 
   /**

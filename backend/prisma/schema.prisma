@@ -249,6 +249,11 @@ model DepositOrder {
   @@index([status])
 }
 
+model DepositAddressCounter {
+  id        String @id   // network name: "TON" or "TRC20"
+  nextIndex Int    @default(1)
+}
+
 model AuditLog {
   id           String         @id @default(cuid())
   actorType    AuditActorType

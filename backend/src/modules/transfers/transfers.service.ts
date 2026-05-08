@@ -18,7 +18,8 @@ export class TransfersService {
     fromUserId: string,
     fromTelegramUserId: string,
     dto: {
-      recipientTelegramUserId: string;
+      recipientTelegramUserId?: string;
+      recipientAddress?: string;
       assetCode: string;
       network: string;
       amount: string;
@@ -40,11 +41,40 @@ export class TransfersService {
       if (existingOrder) return existingOrder;
 
       const result = await this.prisma.$transaction(async (tx) => {
-        const recipient = await tx.user.findUnique({
-          where: {
-            telegramUserId: dto.recipientTelegramUserId,
-          },
-        });
+        const recipientTelegramUserId = dto.recipientTelegramUserId?.trim();
+        const recipientAddress = dto.recipientAddress?.trim();
+        let recipient = null;
+
+        if (recipientAddress) {
+          const addressRecord = await tx.walletAddress.findFirst({
+            where: {
+              address: recipientAddress,
+              walletAccount: {
+                assetCode: dto.assetCode,
+                network: dto.network,
+              },
+            },
+            include: {
+              walletAccount: {
+                include: {
+                  user: true,
+                },
+              },
+            },
+          });
+
+          if (!addressRecord) {
+            throw new NotFoundException("Recipient address is not an internal wallet address");
+          }
+
+          recipient = addressRecord.walletAccount.user;
+        } else if (recipientTelegramUserId) {
+          recipient = await tx.user.findUnique({
+            where: {
+              telegramUserId: recipientTelegramUserId,
+            },
+          });
+        }
 
         if (!recipient) {
           throw new NotFoundException("Recipient user does not exist");

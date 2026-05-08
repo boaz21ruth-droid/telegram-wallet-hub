@@ -30,7 +30,7 @@ export class DepositScannerService {
 
   private async runScan() {
     const addresses = await this.prisma.walletAddress.findMany({
-      where: { isPrimary: true },
+      where: { isPrimary: true, walletAccount: { network: "TON" } },
       include: { walletAccount: true },
     });
 
