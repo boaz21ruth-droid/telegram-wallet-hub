@@ -6,6 +6,7 @@ import {
   type AssignDepositAddressBody,
   type CreateAdjustmentBody,
   type CreditDepositBody,
+  type FiatOnrampStatus,
   type UserStatus,
   type WithdrawStatus,
 } from "@/lib/api";
@@ -164,5 +165,41 @@ export function useAdminCreateAdjustment() {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
     },
+  });
+}
+
+export function useAdminFiatOrders(status?: FiatOnrampStatus | "ALL") {
+  const { isAuthenticated } = useAdminAuth();
+  return useQuery({
+    queryKey: ["admin", "fiat-onramp", status ?? "all"],
+    queryFn: () => adminApi.fiatOnramp.orders(status),
+    enabled: isAuthenticated,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAdminFiatReviewStart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.fiatOnramp.reviewStart(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "fiat-onramp"] }),
+  });
+}
+
+export function useAdminFiatApprove() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      adminApi.fiatOnramp.approve(id, note),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "fiat-onramp"] }),
+  });
+}
+
+export function useAdminFiatReject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      adminApi.fiatOnramp.reject(id, note),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "fiat-onramp"] }),
   });
 }

@@ -15,7 +15,9 @@ export type AdminPermission =
   | "adjustments:view"
   | "adjustments:create"
   | "audit:view"
-  | "kyc:review";
+  | "kyc:review"
+  | "fiat-onramp:view"
+  | "fiat-onramp:review";
 
 export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -40,6 +42,8 @@ const PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "adjustments:create",
     "audit:view",
     "kyc:review",
+    "fiat-onramp:view",
+    "fiat-onramp:review",
   ],
   OPS_REVIEWER: [
     "dashboard:view",
@@ -51,6 +55,8 @@ const PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "withdrawals:review",
     "audit:view",
     "kyc:review",
+    "fiat-onramp:view",
+    "fiat-onramp:review",
   ],
   FINANCE_OPERATOR: [
     "dashboard:view",
@@ -63,6 +69,7 @@ const PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     "adjustments:view",
     "adjustments:create",
     "audit:view",
+    "fiat-onramp:view",
   ],
 };
 

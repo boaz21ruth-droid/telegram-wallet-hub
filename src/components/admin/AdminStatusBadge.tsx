@@ -17,11 +17,18 @@ const LABELS: Record<string, string> = {
   APPROVED: "已通过",
   NOT_REQUIRED: "免审核",
   CANCELED: "已取消",
+  CANCELLED: "已取消",
   FROZEN: "已冻结",
   CLOSED: "已关闭",
   USER: "用户",
   ADMIN: "管理员",
   SYSTEM: "系统",
+  // Fiat on-ramp
+  COMPLETED: "已完成",
+  PENDING_PAYMENT: "待付款",
+  PAYMENT_SUBMITTED: "已上传凭证",
+  UNDER_REVIEW: "审核中",
+  EXPIRED: "已过期",
 };
 
 const TONES: Record<string, string> = {
@@ -45,6 +52,12 @@ const TONES: Record<string, string> = {
   FAILED: "border-rose-500/30 bg-rose-500/10 text-rose-300",
   CLOSED: "border-zinc-500/30 bg-zinc-500/10 text-zinc-300",
   CANCELED: "border-zinc-500/30 bg-zinc-500/10 text-zinc-300",
+  CANCELLED: "border-zinc-500/30 bg-zinc-500/10 text-zinc-300",
+  EXPIRED: "border-zinc-500/30 bg-zinc-500/10 text-zinc-300",
+  COMPLETED: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  PENDING_PAYMENT: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  PAYMENT_SUBMITTED: "border-sky-500/30 bg-sky-500/10 text-sky-300",
+  UNDER_REVIEW: "border-amber-500/30 bg-amber-500/10 text-amber-300",
 };
 
 export function AdminStatusBadge({ value }: { value: string }) {

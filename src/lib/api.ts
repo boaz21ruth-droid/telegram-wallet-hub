@@ -261,6 +261,25 @@ export const adminApi = {
         body: JSON.stringify(body),
       }),
   },
+  fiatOnramp: {
+    orders: (status?: FiatOnrampStatus | "ALL", limit = 50, offset = 0) => {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (status && status !== "ALL") params.set("status", status);
+      return adminRequest<AdminFiatOnrampRecord[]>(`/admin/fiat-onramp/orders?${params}`);
+    },
+    reviewStart: (id: string) =>
+      adminRequest<AdminFiatOnrampRecord>(`/admin/fiat-onramp/orders/${id}/review-start`, { method: "POST" }),
+    approve: (id: string, reviewerNote?: string) =>
+      adminRequest<AdminFiatOnrampRecord>(`/admin/fiat-onramp/orders/${id}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ reviewerNote }),
+      }),
+    reject: (id: string, reviewerNote?: string) =>
+      adminRequest<AdminFiatOnrampRecord>(`/admin/fiat-onramp/orders/${id}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reviewerNote }),
+      }),
+  },
   wallet: {
     stats: () => adminRequest<AdminDashboardStats>("/admin/wallet/stats"),
     createAdjustment: (body: CreateAdjustmentBody) =>
@@ -735,4 +754,17 @@ export interface StakingOrder {
 export interface StakeAssetBody {
   productId: string;
   amount: string;
+}
+
+export interface AdminFiatOnrampRecord extends FiatOnrampOrder {
+  user: {
+    id: string;
+    telegramUserId: string;
+    username: string | null;
+  };
+  paymentProofPath: string | null;
+  paymentNote: string | null;
+  paymentAccountRef: string | null;
+  reviewerNote: string | null;
+  reviewedAt: string | null;
 }
