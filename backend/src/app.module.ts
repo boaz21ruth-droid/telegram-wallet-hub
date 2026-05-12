@@ -20,6 +20,9 @@ import { TonModule } from "./modules/ton/ton.module";
 import { Trc20Module } from "./modules/trc20/trc20.module";
 import { TelegramNotificationModule } from "./common/telegram/telegram-notification.module";
 import { KycModule } from "./modules/kyc/kyc.module";
+import { SwapModule } from "./modules/swap/swap.module";
+import { FiatOnrampModule } from "./modules/fiat-onramp/fiat-onramp.module";
+import { StakingModule } from "./modules/staking/staking.module";
 
 @Module({
   imports: [
@@ -45,6 +48,9 @@ import { KycModule } from "./modules/kyc/kyc.module";
     TonModule,
     Trc20Module,
     KycModule,
+    SwapModule,
+    FiatOnrampModule,
+    StakingModule,
   ],
   providers: [
     {

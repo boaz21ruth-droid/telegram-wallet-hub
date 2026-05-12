@@ -3,9 +3,10 @@ import BottomNav from "@/components/BottomNav";
 import WalletPage from "./WalletPage";
 import MarketPage from "./MarketPage";
 import HistoryPage from "./HistoryPage";
+import EarnPage from "./EarnPage";
 import ProfilePage from "./ProfilePage";
 
-const PAGES = [WalletPage, MarketPage, HistoryPage, ProfilePage];
+const PAGES = [WalletPage, MarketPage, HistoryPage, EarnPage, ProfilePage];
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState(0);

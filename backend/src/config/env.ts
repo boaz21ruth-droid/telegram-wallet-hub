@@ -29,6 +29,18 @@ const envSchema = z.object({
   TRC20_USDT_CONTRACT: z.string().default("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"),
   // BIP44 mnemonic for TRC20; index 0 = hot wallet (withdrawals), 1+ = deposit addresses
   TRC20_HOT_WALLET_MNEMONIC: z.string().optional(),
+  // Swap fee rates
+  SWAP_SPREAD_RATE: z.string().default("0.005"),     // 0.5% spread for asset swaps
+  BRIDGE_SPREAD_RATE: z.string().default("0.002"),   // 0.2% spread for bridge
+  BRIDGE_FIXED_FEE_USDT: z.string().default("0.5"), // fixed fee in USDT for bridge
+  // Fiat on-ramp
+  FIAT_CNY_RATE: z.string().default("7.25"),         // CNY per USD
+  FIAT_FEE_RATE: z.string().default("0.015"),        // 1.5% platform fee
+  FIAT_ORDER_EXPIRE_MINUTES: z.coerce.number().int().positive().default(15),
+  // Staking
+  STAKING_PLATFORM_FEE_RATE: z.string().default("0.15"),  // 15% of yield
+  STAKING_BATCH_MIN_USDT: z.string().default("100"),       // min USDT before on-chain deposit
+  JUSTLEND_USDT_MARKET: z.string().optional(),             // JustLend USDT jToken contract address
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

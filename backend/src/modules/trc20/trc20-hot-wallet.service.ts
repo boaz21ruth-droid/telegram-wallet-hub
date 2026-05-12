@@ -54,6 +54,40 @@ export class Trc20HotWalletService implements OnModuleInit {
     return txId;
   }
 
+  // ── JustLend integration (P2-3 stubs) ─────────────────────────────────────
+
+  async depositToJustLend(amount: string): Promise<string> {
+    if (!this.tronWeb) throw new Error("TRC20 hot wallet not configured");
+    const { JUSTLEND_USDT_MARKET } = env();
+    if (!JUSTLEND_USDT_MARKET) throw new Error("JUSTLEND_USDT_MARKET not configured");
+    this.logger.log(`[JustLend] depositToJustLend ${amount} USDT (stub)`);
+    // TODO: call JustLend supply() on JUSTLEND_USDT_MARKET contract
+    return "stub-txhash";
+  }
+
+  async withdrawFromJustLend(amount: string): Promise<string> {
+    if (!this.tronWeb) throw new Error("TRC20 hot wallet not configured");
+    const { JUSTLEND_USDT_MARKET } = env();
+    if (!JUSTLEND_USDT_MARKET) throw new Error("JUSTLEND_USDT_MARKET not configured");
+    this.logger.log(`[JustLend] withdrawFromJustLend ${amount} USDT (stub)`);
+    // TODO: call JustLend redeemUnderlying() on JUSTLEND_USDT_MARKET contract
+    return "stub-txhash";
+  }
+
+  async getJustLendBalance(): Promise<string> {
+    if (!this.tronWeb) throw new Error("TRC20 hot wallet not configured");
+    this.logger.log("[JustLend] getJustLendBalance (stub) → 0");
+    // TODO: call jToken.balanceOfUnderlying() on JUSTLEND_USDT_MARKET contract
+    return "0";
+  }
+
+  async getJustLendApy(): Promise<number> {
+    if (!this.tronWeb) throw new Error("TRC20 hot wallet not configured");
+    this.logger.log("[JustLend] getJustLendApy (stub) → 0.042");
+    // TODO: compute from supplyRatePerBlock × blocks-per-year on JUSTLEND_USDT_MARKET
+    return 0.042;
+  }
+
   private derivePrivateKey(index: number): string {
     const account = TronWeb.fromMnemonic(this.mnemonic, `m/44'/195'/0'/0/${index}`);
     return account.privateKey.replace(/^0x/, "");

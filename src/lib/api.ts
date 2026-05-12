@@ -149,6 +149,46 @@ export const depositsApi = {
     userRequest<DepositOrder[]>(`/deposits/orders?limit=${limit}&offset=${offset}`),
 };
 
+// ── Fiat On-ramp ──────────────────────────────────────────────────────────────
+export const fiatOnrampApi = {
+  quote: (fiatCurrency: string, fiatAmount: string, assetCode?: string, network?: string) => {
+    const params = new URLSearchParams({ fiatCurrency, fiatAmount });
+    if (assetCode) params.set("assetCode", assetCode);
+    if (network) params.set("network", network);
+    return userRequest<FiatQuote>(`/fiat-onramp/quote?${params}`);
+  },
+  paymentMethods: () => publicRequest<FiatPaymentMethod[]>("/fiat-onramp/payment-methods"),
+  createOrder: (body: CreateFiatOrderBody) =>
+    userRequest<FiatOnrampOrder>("/fiat-onramp/orders", { method: "POST", body: JSON.stringify(body) }),
+  submitProof: (orderId: string, formData: FormData) =>
+    userRequest<FiatOnrampOrder>(`/fiat-onramp/orders/${orderId}/proof`, { method: "POST", body: formData }),
+  cancelOrder: (orderId: string) =>
+    userRequest<FiatOnrampOrder>(`/fiat-onramp/orders/${orderId}/cancel`, { method: "POST" }),
+  orders: (limit = 20, offset = 0) =>
+    userRequest<FiatOnrampOrder[]>(`/fiat-onramp/orders?limit=${limit}&offset=${offset}`),
+};
+
+// ── Swap ──────────────────────────────────────────────────────────────────────
+export const swapApi = {
+  quote: (body: GetSwapQuoteBody) =>
+    userRequest<SwapQuote>("/swap/quote", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: CreateSwapBody) =>
+    userRequest<SwapOrder>("/swap", { method: "POST", body: JSON.stringify(body) }),
+  orders: (limit = 20, offset = 0) =>
+    userRequest<SwapOrder[]>(`/swap/orders?limit=${limit}&offset=${offset}`),
+};
+
+// ── Staking ───────────────────────────────────────────────────────────────────
+export const stakingApi = {
+  products: () => userRequest<StakingProduct[]>("/staking/products"),
+  stake: (body: StakeAssetBody) =>
+    userRequest<StakingOrder>("/staking/orders", { method: "POST", body: JSON.stringify(body) }),
+  redeem: (orderId: string) =>
+    userRequest<StakingOrder>(`/staking/orders/${orderId}/redeem`, { method: "POST" }),
+  myOrders: (limit = 20, offset = 0) =>
+    userRequest<StakingOrder[]>(`/staking/orders?limit=${limit}&offset=${offset}`),
+};
+
 // ── KYC ───────────────────────────────────────────────────────────────────────
 export const kycApi = {
   submit: (formData: FormData) =>
@@ -261,7 +301,12 @@ export type JournalType =
   | "WITHDRAWAL_FREEZE"
   | "WITHDRAWAL_RELEASE"
   | "WITHDRAWAL_CONFIRM"
-  | "ADJUSTMENT";
+  | "ADJUSTMENT"
+  | "SWAP"
+  | "FIAT_ONRAMP"
+  | "STAKING_LOCK"
+  | "STAKING_UNLOCK"
+  | "STAKING_YIELD";
 export type AdminRole = "SUPER_ADMIN" | "OPS_REVIEWER" | "FINANCE_OPERATOR";
 
 export interface User {
@@ -463,6 +508,108 @@ export interface AuditLogRecord {
   createdAt: string;
 }
 
+export interface FiatQuote {
+  fiatCurrency: string;
+  fiatAmount: string;
+  assetCode: string;
+  network: string;
+  midRate: string;
+  grossAmount: string;
+  feeAmount: string;
+  cryptoAmount: string;
+  feeRate: string;
+}
+
+export interface FiatPaymentMethod {
+  id: string;
+  code: string;
+  displayName: string;
+  accountName: string;
+  accountNumber: string;
+  qrCodePath: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export type FiatOnrampStatus =
+  | "PENDING_PAYMENT"
+  | "PAYMENT_SUBMITTED"
+  | "UNDER_REVIEW"
+  | "COMPLETED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED";
+
+export interface FiatOnrampOrder {
+  id: string;
+  userId: string;
+  fiatCurrency: string;
+  fiatAmount: string;
+  assetCode: string;
+  network: string;
+  cryptoAmount: string;
+  grossAmount: string;
+  feeAmount: string;
+  exchangeRate: string;
+  feeRate: string;
+  paymentMethodCode: string | null;
+  paymentAccountRef: string | null;
+  paymentNote: string | null;
+  status: FiatOnrampStatus;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface CreateFiatOrderBody {
+  fiatCurrency: string;
+  fiatAmount: string;
+  assetCode?: string;
+  network?: string;
+  paymentMethodCode?: string;
+}
+
+export interface SwapQuote {
+  midRate: string;
+  toAmount: string;
+  feeAmount: string;
+  expiresAt: string;
+}
+
+export interface SwapOrder {
+  id: string;
+  userId: string;
+  fromAssetCode: string;
+  fromNetwork: string;
+  fromAmount: string;
+  toAssetCode: string;
+  toNetwork: string;
+  toAmount: string;
+  midRate: string;
+  feeRate: string;
+  feeAmount: string;
+  bizNo: string;
+  status: "COMPLETED" | "FAILED";
+  createdAt: string;
+}
+
+export interface GetSwapQuoteBody {
+  fromAssetCode: string;
+  fromNetwork: string;
+  fromAmount: string;
+  toAssetCode: string;
+  toNetwork: string;
+}
+
+export interface CreateSwapBody {
+  fromAssetCode: string;
+  fromNetwork: string;
+  fromAmount: string;
+  toAssetCode: string;
+  toNetwork: string;
+  minToAmount: string;
+  bizNo: string;
+}
+
 export interface CreateTransferBody {
   recipientTelegramUserId?: string;
   recipientAddress?: string;
@@ -546,4 +693,46 @@ export interface AdminKycRecord extends KycApplication {
     firstName: string | null;
     lastName: string | null;
   };
+}
+
+export type StakingProductType = "FLEXIBLE" | "FIXED";
+export type StakingOrderStatus = "ACTIVE" | "REDEEMING" | "REDEEMED";
+
+export interface StakingProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  assetCode: string;
+  network: string;
+  productType: StakingProductType;
+  minAmount: string;
+  maxAmount: string | null;
+  totalCap: string | null;
+  lockDays: number;
+  currentApy: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StakingOrder {
+  id: string;
+  userId: string;
+  productId: string;
+  product: StakingProduct;
+  assetCode: string;
+  network: string;
+  principal: string;
+  accruedYield: string;
+  lastYieldAt: string | null;
+  nextYieldAt: string | null;
+  maturesAt: string | null;
+  status: StakingOrderStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StakeAssetBody {
+  productId: string;
+  amount: string;
 }

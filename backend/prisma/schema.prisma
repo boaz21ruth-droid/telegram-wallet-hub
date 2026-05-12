@@ -44,6 +44,11 @@ enum JournalType {
   WITHDRAWAL_RELEASE
   WITHDRAWAL_CONFIRM
   ADJUSTMENT
+  SWAP
+  FIAT_ONRAMP
+  STAKING_LOCK
+  STAKING_UNLOCK
+  STAKING_YIELD
 }
 
 enum DepositStatus {
@@ -84,6 +89,11 @@ enum WithdrawStatus {
   FAILED
 }
 
+enum SwapStatus {
+  COMPLETED
+  FAILED
+}
+
 enum AuditActorType {
   USER
   ADMIN
@@ -112,6 +122,9 @@ model User {
   incomingTransfers  TransferOrder[] @relation("IncomingTransfers")
   withdrawOrders     WithdrawOrder[] @relation("UserWithdrawOrders")
   depositOrders      DepositOrder[]
+  swapOrders         SwapOrder[]
+  fiatOnrampOrders   FiatOnrampOrder[]
+  stakingOrders      StakingOrder[]
   kycApplication     KycApplication?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -127,6 +140,7 @@ model AdminAccount {
   sessions           AdminSession[]
   reviewedWithdraws           WithdrawOrder[]    @relation("ReviewedAdminWithdrawOrders")
   reviewedKycApplications     KycApplication[]   @relation("ReviewedKycApplications")
+  reviewedFiatOrders          FiatOnrampOrder[]  @relation("ReviewedFiatOrders")
   createdAt                   DateTime           @default(now())
   updatedAt                   DateTime           @updatedAt
 }
@@ -166,6 +180,7 @@ model WalletAccount {
   network          String
   availableBalance Decimal             @default(0) @db.Decimal(36, 18)
   frozenBalance    Decimal             @default(0) @db.Decimal(36, 18)
+  stakedBalance    Decimal             @default(0) @db.Decimal(36, 18)
   status           WalletAccountStatus @default(ACTIVE)
   addresses        WalletAddress[]
   ledgerEntries    LedgerEntry[]
@@ -289,9 +304,177 @@ model DepositOrder {
   @@index([status])
 }
 
+model SwapOrder {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fromAssetCode String
+  fromNetwork   String
+  fromAmount    Decimal    @db.Decimal(36, 18)
+
+  toAssetCode   String
+  toNetwork     String
+  toAmount      Decimal    @db.Decimal(36, 18)
+
+  midRate       Decimal    @db.Decimal(36, 18)
+  feeRate       Decimal    @db.Decimal(36, 18)
+  feeAmount     Decimal    @db.Decimal(36, 18)
+
+  bizNo         String
+  status        SwapStatus @default(COMPLETED)
+  journalId     String?    @unique
+  note          String?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([userId, bizNo])
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
 model DepositAddressCounter {
   id        String @id   // network name: "TON" or "TRC20"
   nextIndex Int    @default(1)
+}
+
+// ── Fiat On-ramp ──────────────────────────────────────────────────────────────
+
+enum FiatOnrampStatus {
+  PENDING_PAYMENT
+  PAYMENT_SUBMITTED
+  UNDER_REVIEW
+  COMPLETED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+model FiatOnrampOrder {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fiatCurrency      String
+  fiatAmount        Decimal          @db.Decimal(36, 6)
+
+  assetCode         String
+  network           String
+  cryptoAmount      Decimal          @db.Decimal(36, 18)
+  grossAmount       Decimal          @db.Decimal(36, 18)
+  feeAmount         Decimal          @db.Decimal(36, 18)
+
+  exchangeRate      Decimal          @db.Decimal(36, 6)
+  feeRate           Decimal          @db.Decimal(36, 6)
+
+  paymentMethodCode String?
+  paymentAccountRef String?
+  paymentProofPath  String?
+  paymentNote       String?
+
+  reviewerId        String?
+  reviewer          AdminAccount?    @relation("ReviewedFiatOrders", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewerNote      String?
+  reviewedAt        DateTime?
+
+  status            FiatOnrampStatus @default(PENDING_PAYMENT)
+  journalId         String?          @unique
+  expiresAt         DateTime
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model FiatPaymentMethod {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  displayName   String
+  accountName   String
+  accountNumber String
+  qrCodePath    String?
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ── Staking ───────────────────────────────────────────────────────────────────
+
+enum StakingProductType {
+  FLEXIBLE
+  FIXED
+}
+
+enum StakingOrderStatus {
+  ACTIVE
+  REDEEMING
+  REDEEMED
+}
+
+model StakingProduct {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  assetCode   String
+  network     String
+  productType StakingProductType
+  minAmount   Decimal            @db.Decimal(36, 18)
+  maxAmount   Decimal?           @db.Decimal(36, 18)
+  totalCap    Decimal?           @db.Decimal(36, 18)
+  lockDays    Int                @default(0)
+  currentApy  Decimal            @default(0.042) @db.Decimal(10, 6)
+  isActive    Boolean            @default(true)
+  orders      StakingOrder[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model StakingOrder {
+  id                  String             @id @default(cuid())
+  userId              String
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId           String
+  product             StakingProduct     @relation(fields: [productId], references: [id])
+
+  assetCode           String
+  network             String
+  principal           Decimal            @db.Decimal(36, 18)
+  accruedYield        Decimal            @default(0) @db.Decimal(36, 18)
+  lastYieldAt         DateTime?
+  nextYieldAt         DateTime?
+  maturesAt           DateTime?
+  redeemRequestedAt   DateTime?
+
+  status              StakingOrderStatus @default(ACTIVE)
+  lockJournalId       String?            @unique
+  unlockJournalId     String?            @unique
+  yieldRecords        StakingYieldRecord[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([userId, status])
+  @@index([status, nextYieldAt])
+}
+
+model StakingYieldRecord {
+  id             String       @id @default(cuid())
+  stakingOrderId String
+  order          StakingOrder @relation(fields: [stakingOrderId], references: [id])
+  userId         String
+  assetCode      String
+  network        String
+  grossYield     Decimal      @db.Decimal(36, 18)
+  platformFee    Decimal      @db.Decimal(36, 18)
+  netYield       Decimal      @db.Decimal(36, 18)
+  journalId      String       @unique
+  periodStart    DateTime
+  periodEnd      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([stakingOrderId])
 }
 
 model KycApplication {
