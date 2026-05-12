@@ -3,7 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Prisma, UserRole } from "@prisma/client";
 
 import { env } from "../../config/env";
-import { supportedAssets } from "../../config/supported-assets";
+import { getEnabledAssets } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { validateTelegramInitData } from "../../common/utils/telegram.util";
 
@@ -47,7 +47,7 @@ export class AuthService {
       });
 
       await tx.walletAccount.createMany({
-        data: supportedAssets.map((asset) => ({
+        data: getEnabledAssets().map((asset) => ({
           userId: userRecord.id,
           assetCode: asset.assetCode,
           network: asset.network,
@@ -131,7 +131,7 @@ export class AuthService {
       });
 
       await tx.walletAccount.createMany({
-        data: supportedAssets.map((asset) => ({
+        data: getEnabledAssets().map((asset) => ({
           userId: userRecord.id,
           assetCode: asset.assetCode,
           network: asset.network,

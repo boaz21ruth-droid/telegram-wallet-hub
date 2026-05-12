@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 
-import { supportedAssets } from "../../config/supported-assets";
+import { getEnabledAssets } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { HotWalletService } from "../ton/hot-wallet.service";
 import { TonService } from "../ton/ton.service";
@@ -80,7 +80,7 @@ export class WalletService {
   }
 
   listSupportedAssets() {
-    return supportedAssets;
+    return getEnabledAssets();
   }
 
   async listTransactions(userId: string, limit: number, offset = 0) {

@@ -49,7 +49,7 @@ export class WithdrawalBroadcasterService {
 
   private async runBroadcast() {
     const orders = await this.prisma.withdrawOrder.findMany({
-      where: { status: "READY_FOR_SIGNING" },
+      where: { status: "READY_FOR_SIGNING", network: "TON" },
       orderBy: { createdAt: "asc" },
       take: 5, // process at most 5 per minute to avoid seqno conflicts
     });
@@ -88,7 +88,7 @@ export class WithdrawalBroadcasterService {
 
   private async runConfirmation() {
     const orders = await this.prisma.withdrawOrder.findMany({
-      where: { status: "SIGNED" },
+      where: { status: "SIGNED", network: "TON" },
       orderBy: { updatedAt: "asc" },
       take: 20,
     });

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { env } from "../../config/env";
 
-interface Trc20Deposit {
+export interface Trc20Deposit {
+  assetCode: string;
   txHash: string;
   fromAddress: string;
   amount: string;
@@ -29,12 +30,17 @@ export class Trc20Service {
     const headers: Record<string, string> = {};
     if (TRONGRID_API_KEY) headers["TRON-PRO-API-KEY"] = TRONGRID_API_KEY;
 
+    this.logger.debug(`TronGrid: scanning deposits for ${address} since ${minTs}`);
     const res = await fetch(
       `${TRONGRID_API_URL}/v1/accounts/${address}/transactions/trc20?${params}`,
       { headers, signal: AbortSignal.timeout(10_000) },
     );
 
-    if (!res.ok) throw new Error(`TronGrid ${res.status}: ${await res.text()}`);
+    if (!res.ok) {
+      const body = await res.text();
+      this.logger.warn(`TronGrid ${res.status} for ${address}: ${body}`);
+      throw new Error(`TronGrid ${res.status}: ${body}`);
+    }
 
     const json = (await res.json()) as {
       data: Array<{
@@ -49,6 +55,7 @@ export class Trc20Service {
     if (!json.success) return [];
 
     return json.data.map((tx) => ({
+      assetCode: "USDT",
       txHash: tx.transaction_id,
       fromAddress: tx.from,
       amount: this.formatAmount(tx.value),
@@ -61,6 +68,7 @@ export class Trc20Service {
     const headers: Record<string, string> = {};
     if (TRONGRID_API_KEY) headers["TRON-PRO-API-KEY"] = TRONGRID_API_KEY;
 
+    this.logger.debug(`TronGrid: checking confirmation for txHash=${txHash}`);
     try {
       const res = await fetch(`${TRONGRID_API_URL}/v1/transactions/${txHash}`, {
         headers,

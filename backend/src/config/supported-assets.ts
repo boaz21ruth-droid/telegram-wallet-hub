@@ -28,6 +28,13 @@ export const supportedAssets: SupportedAsset[] = [
   },
 ];
 
+export function getEnabledAssets(): SupportedAsset[] {
+  const raw = process.env.DISABLED_NETWORKS ?? "TON";
+  const disabled = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (disabled.length === 0) return supportedAssets;
+  return supportedAssets.filter((a) => !disabled.includes(a.network));
+}
+
 export function getSupportedAssetOrThrow(assetCode: string, network: string): SupportedAsset {
   const asset = supportedAssets.find((item) => item.assetCode === assetCode && item.network === network);
 

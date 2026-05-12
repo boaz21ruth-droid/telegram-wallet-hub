@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { TronWeb } from "tronweb";
 import { env } from "../../config/env";
+import { parseUsdtAmountToUnits } from "./trc20-utils";
 
 @Injectable()
 export class Trc20HotWalletService implements OnModuleInit {
@@ -32,10 +33,21 @@ export class Trc20HotWalletService implements OnModuleInit {
     return account.address;
   }
 
+  async getUsdtBalance(): Promise<string> {
+    if (!this.tronWeb) throw new Error("TRC20 hot wallet not configured");
+    const { TRC20_USDT_CONTRACT } = env();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contract = await (this.tronWeb as any).contract().at(TRC20_USDT_CONTRACT);
+    const hotAddr = this.tronWeb.defaultAddress.base58;
+    const rawBalance: string = await contract.balanceOf(hotAddr).call();
+    const units = BigInt(rawBalance);
+    return `${units / 1_000_000n}.${String(units % 1_000_000n).padStart(6, "0")}`;
+  }
+
   async broadcastUsdtTransfer(toAddress: string, amount: string): Promise<string> {
     if (!this.tronWeb) throw new Error("TRC20 hot wallet not configured");
     const { TRC20_USDT_CONTRACT } = env();
-    const amountUnits = BigInt(Math.round(parseFloat(amount) * 1_000_000));
+    const amountUnits = parseUsdtAmountToUnits(amount);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const contract = await (this.tronWeb as any).contract().at(TRC20_USDT_CONTRACT);
     const txId: string = await contract.transfer(toAddress, amountUnits.toString()).send();

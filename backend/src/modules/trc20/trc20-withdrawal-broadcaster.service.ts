@@ -5,6 +5,7 @@ import { WithdrawalsService } from "../withdrawals/withdrawals.service";
 import { TelegramNotificationService } from "../../common/telegram/telegram-notification.service";
 import { Trc20HotWalletService } from "./trc20-hot-wallet.service";
 import { Trc20Service } from "./trc20.service";
+import { hasSufficientBalance } from "./trc20-balance";
 
 @Injectable()
 export class Trc20WithdrawalBroadcasterService {
@@ -53,7 +54,24 @@ export class Trc20WithdrawalBroadcasterService {
       take: 5,
     });
 
+    if (orders.length === 0) return;
+
+    const hotBalance = await this.hotWallet.getUsdtBalance().catch((err) => {
+      this.logger.error(`Failed to fetch TRC20 hot wallet balance: ${err}`);
+      return null;
+    });
+    if (hotBalance === null) return;
+
     for (const order of orders) {
+      const fee = order.fee.toString();
+      if (!hasSufficientBalance(hotBalance, order.amount.toString(), fee)) {
+        this.logger.warn(
+          `Hot wallet balance ${hotBalance} USDT insufficient for withdrawal ${order.id} ` +
+          `(amount=${order.amount} fee=${fee}) — skipping`,
+        );
+        continue;
+      }
+
       try {
         this.logger.log(
           `Broadcasting TRC20 withdrawal ${order.id}: ${order.amount} USDT → ${order.toAddress}`,

@@ -3,6 +3,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { DepositsService } from "../deposits/deposits.service";
 import { Trc20Service } from "./trc20.service";
+import { filterDepositsByAsset, isAboveDustThreshold } from "./trc20-utils";
 
 @Injectable()
 export class Trc20DepositScannerService {
@@ -38,22 +39,29 @@ export class Trc20DepositScannerService {
       try {
         const deposits = await this.trc20Service.getNewDeposits(addr.address, addr.lastScannedLt);
 
-        let maxTs = BigInt(addr.lastScannedLt === "0" ? "0" : addr.lastScannedLt);
+        const prevTs = BigInt(addr.lastScannedLt === "0" ? "0" : addr.lastScannedLt);
+        // Advance cursor past ALL scanned txs (incl. dust/wrong-asset) to prevent rescanning
+        let maxTs = deposits.reduce(
+          (m, d) => (d.blockTimestampMs > m ? d.blockTimestampMs : m),
+          prevTs,
+        );
 
-        for (const deposit of deposits) {
+        const relevant = filterDepositsByAsset(deposits, addr.walletAccount.assetCode)
+          .filter((d) => isAboveDustThreshold(d.amount));
+
+        for (const deposit of relevant) {
           try {
             await this.depositsService.creditDepositBySystem({
               walletAccountId: addr.walletAccount.id,
-              assetCode: "USDT",
+              assetCode: addr.walletAccount.assetCode,
               network: "TRC20",
               amount: deposit.amount,
               fromAddress: deposit.fromAddress,
               txHash: deposit.txHash,
             });
             this.logger.log(
-              `Credited ${deposit.amount} USDT (TRC20) to walletAccount=${addr.walletAccount.id} txHash=${deposit.txHash}`,
+              `Credited ${deposit.amount} ${addr.walletAccount.assetCode} (TRC20) to walletAccount=${addr.walletAccount.id} txHash=${deposit.txHash}`,
             );
-            if (deposit.blockTimestampMs > maxTs) maxTs = deposit.blockTimestampMs;
           } catch (err: unknown) {
             this.logger.error(
               `Failed to credit TRC20 txHash=${deposit.txHash}: ${err instanceof Error ? err.message : err}`,
@@ -61,7 +69,7 @@ export class Trc20DepositScannerService {
           }
         }
 
-        if (maxTs > BigInt(addr.lastScannedLt === "0" ? "0" : addr.lastScannedLt)) {
+        if (maxTs > prevTs) {
           await this.prisma.walletAddress.update({
             where: { id: addr.id },
             data: { lastScannedLt: maxTs.toString() },
@@ -70,6 +78,8 @@ export class Trc20DepositScannerService {
       } catch (err) {
         this.logger.error(`TRC20 scan failed for address ${addr.address}: ${err}`);
       }
+      // Respect TronGrid rate limits when scanning many addresses
+      await new Promise((r) => setTimeout(r, 200));
     }
   }
 }
