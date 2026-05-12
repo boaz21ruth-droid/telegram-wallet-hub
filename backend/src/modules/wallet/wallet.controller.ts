@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from "@nestjs/common";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { Public } from "../../common/decorators/public.decorator";
 import { AuthenticatedUser } from "../../common/types/authenticated-user";
 import { ListTransactionsQueryDto } from "./dto/list-transactions-query.dto";
 import { WalletService } from "./wallet.service";
@@ -15,6 +16,7 @@ export class WalletController {
   }
 
   @Get("assets")
+  @Public()
   listAssets() {
     return this.walletService.listSupportedAssets();
   }

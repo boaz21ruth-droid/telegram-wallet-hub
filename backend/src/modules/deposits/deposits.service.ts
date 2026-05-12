@@ -4,7 +4,7 @@ import { AuditActorType, DepositStatus, Prisma, WalletAccountStatus } from "@pri
 import { getSupportedAssetOrThrow } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { TelegramNotificationService } from "../../common/telegram/telegram-notification.service";
-import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { AuthenticatedAdmin } from "../../common/types/authenticated-admin";
 import { parsePositiveDecimal } from "../../common/utils/decimal.util";
 import { LedgerService } from "../ledger/ledger.service";
 
@@ -47,7 +47,7 @@ export class DepositsService {
    * Admin: assign a deposit address to a wallet account.
    */
   async assignDepositAddress(
-    adminUser: AuthenticatedUser,
+    adminUser: AuthenticatedAdmin,
     params: {
       telegramUserId: string;
       assetCode: string;
@@ -112,7 +112,7 @@ export class DepositsService {
    * Creates a DepositOrder and a DEPOSIT ledger journal atomically.
    */
   async creditDeposit(
-    adminUser: AuthenticatedUser,
+    adminUser: AuthenticatedAdmin,
     dto: {
       telegramUserId: string;
       assetCode: string;
@@ -246,91 +246,91 @@ export class DepositsService {
     let notifyTelegramUserId: string | null = null;
 
     try {
-    const result = await this.prisma.$transaction(async (tx) => {
-      // Idempotency: if already credited return existing record
-      const existing = await tx.depositOrder.findUnique({ where: { txHash: dto.txHash } });
-      if (existing) return existing;
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Idempotency: if already credited return existing record
+        const existing = await tx.depositOrder.findUnique({ where: { txHash: dto.txHash } });
+        if (existing) return existing;
 
-      const walletAccount = await tx.walletAccount.findUnique({
-        where: { id: dto.walletAccountId },
+        const walletAccount = await tx.walletAccount.findUnique({
+          where: { id: dto.walletAccountId },
+        });
+        if (!walletAccount) throw new NotFoundException("Wallet account not found");
+        if (walletAccount.status !== WalletAccountStatus.ACTIVE) {
+          throw new BadRequestException("Wallet account is not active");
+        }
+        if (walletAccount.assetCode !== dto.assetCode || walletAccount.network !== dto.network) {
+          throw new BadRequestException(
+            `Wallet account asset mismatch: expected ${dto.assetCode}/${dto.network}`,
+          );
+        }
+
+        const user = await tx.user.findUnique({ where: { id: walletAccount.userId } });
+        if (!user) throw new NotFoundException("User not found");
+        notifyTelegramUserId = user.telegramUserId;
+
+        await tx.walletAccount.update({
+          where: { id: walletAccount.id },
+          data: { availableBalance: { increment: amount } },
+        });
+
+        const order = await tx.depositOrder.create({
+          data: {
+            userId: user.id,
+            assetCode: dto.assetCode,
+            network: dto.network,
+            fromAddress: dto.fromAddress,
+            amount,
+            txHash: dto.txHash,
+            note: `Auto-detected on-chain deposit`,
+            status: DepositStatus.CONFIRMED,
+            creditedAt: new Date(),
+          },
+        });
+
+        const journal = await this.ledgerService.recordDeposit(tx, {
+          referenceId: order.id,
+          walletAccountId: walletAccount.id,
+          assetCode: dto.assetCode,
+          network: dto.network,
+          amount,
+          description: `On-chain deposit from ${dto.fromAddress ?? "unknown"}`,
+        });
+
+        await tx.depositOrder.update({
+          where: { id: order.id },
+          data: { journalId: journal.id },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorType: AuditActorType.SYSTEM,
+            actorUserId: null,
+            action: "deposit.credit",
+            resourceType: "deposit_order",
+            resourceId: order.id,
+            metadata: {
+              amount: dto.amount,
+              txHash: dto.txHash,
+              fromAddress: dto.fromAddress ?? null,
+            },
+          },
+        });
+
+        return { ...order, journalId: journal.id };
       });
-      if (!walletAccount) throw new NotFoundException("Wallet account not found");
-      if (walletAccount.status !== WalletAccountStatus.ACTIVE) {
-        throw new BadRequestException("Wallet account is not active");
-      }
-      if (walletAccount.assetCode !== dto.assetCode || walletAccount.network !== dto.network) {
-        throw new BadRequestException(
-          `Wallet account asset mismatch: expected ${dto.assetCode}/${dto.network}`,
+
+      if (notifyTelegramUserId) {
+        this.telegram.sendMessage(
+          notifyTelegramUserId,
+          this.telegram.msgDepositCredited(dto.amount, dto.assetCode),
         );
       }
 
-      const user = await tx.user.findUnique({ where: { id: walletAccount.userId } });
-      if (!user) throw new NotFoundException("User not found");
-      notifyTelegramUserId = user.telegramUserId;
-
-      await tx.walletAccount.update({
-        where: { id: walletAccount.id },
-        data: { availableBalance: { increment: amount } },
-      });
-
-      const order = await tx.depositOrder.create({
-        data: {
-          userId: user.id,
-          assetCode: dto.assetCode,
-          network: dto.network,
-          fromAddress: dto.fromAddress,
-          amount,
-          txHash: dto.txHash,
-          note: `Auto-detected on-chain deposit`,
-          status: DepositStatus.CONFIRMED,
-          creditedAt: new Date(),
-        },
-      });
-
-      const journal = await this.ledgerService.recordDeposit(tx, {
-        referenceId: order.id,
-        walletAccountId: walletAccount.id,
-        assetCode: dto.assetCode,
-        network: dto.network,
-        amount,
-        description: `On-chain deposit from ${dto.fromAddress ?? "unknown"}`,
-      });
-
-      await tx.depositOrder.update({
-        where: { id: order.id },
-        data: { journalId: journal.id },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorType: AuditActorType.SYSTEM,
-          actorUserId: null,
-          action: "deposit.credit",
-          resourceType: "deposit_order",
-          resourceId: order.id,
-          metadata: {
-            amount: dto.amount,
-            txHash: dto.txHash,
-            fromAddress: dto.fromAddress ?? null,
-          },
-        },
-      });
-
-      return { ...order, journalId: journal.id };
-    });
-
-    if (notifyTelegramUserId) {
-      this.telegram.sendMessage(
-        notifyTelegramUserId,
-        this.telegram.msgDepositCredited(dto.amount, dto.assetCode),
-      );
-    }
-
-    return result;
+      return result;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
+        error.code === "P2002"
       ) {
         const existing = await this.prisma.depositOrder.findUnique({
           where: { txHash: dto.txHash },

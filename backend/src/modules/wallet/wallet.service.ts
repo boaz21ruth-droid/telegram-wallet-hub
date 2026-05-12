@@ -1,15 +1,19 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 
 import { supportedAssets } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { HotWalletService } from "../ton/hot-wallet.service";
+import { TonService } from "../ton/ton.service";
 import { Trc20HotWalletService } from "../trc20/trc20-hot-wallet.service";
 
 @Injectable()
 export class WalletService {
+  private readonly logger = new Logger(WalletService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly hotWallet: HotWalletService,
+    private readonly tonService: TonService,
     private readonly trc20HotWallet: Trc20HotWalletService,
   ) {}
 
@@ -53,6 +57,17 @@ export class WalletService {
 
       return { address, memo: null };
     });
+
+    // Cache the Jetton wallet address for TON-USDT accounts (outside tx — requires HTTP call)
+    if (network === "TON" && assetCode === "USDT") {
+      const jettonAddr = await this.tonService.getUsdtJettonWalletAddress(derived.address);
+      if (jettonAddr) {
+        await this.prisma.walletAddress.update({
+          where: { address: derived.address },
+          data: { jettonWalletAddress: jettonAddr },
+        }).catch((err) => this.logger.warn(`Failed to cache jettonWalletAddress: ${err}`));
+      }
+    }
 
     return { assetCode, network, address: derived.address, memo: derived.memo };
   }

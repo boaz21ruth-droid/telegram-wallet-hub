@@ -1,7 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AuditActorType,
-  Prisma,
   ReviewStatus,
   WalletAccountStatus,
   WithdrawOrder,
@@ -12,7 +11,7 @@ import { env } from "../../config/env";
 import { getSupportedAssetOrThrow } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { TelegramNotificationService } from "../../common/telegram/telegram-notification.service";
-import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { AuthenticatedAdmin } from "../../common/types/authenticated-admin";
 import { parseDecimal, parsePositiveDecimal } from "../../common/utils/decimal.util";
 import { LedgerService } from "../ledger/ledger.service";
 
@@ -170,7 +169,7 @@ export class WithdrawalsService {
     return this.listAdminOrders(WithdrawStatus.PENDING_REVIEW);
   }
 
-  async approveReview(orderId: string, adminUser: AuthenticatedUser, note?: string) {
+  async approveReview(orderId: string, adminUser: AuthenticatedAdmin, note?: string) {
     let capturedOrder: WithdrawOrder | null = null;
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -233,7 +232,7 @@ export class WithdrawalsService {
     return result;
   }
 
-  async rejectReview(orderId: string, adminUser: AuthenticatedUser, note?: string) {
+  async rejectReview(orderId: string, adminUser: AuthenticatedAdmin, note?: string) {
     let capturedOrder: WithdrawOrder | null = null;
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -342,7 +341,7 @@ export class WithdrawalsService {
   /**
    * Admin: sign the withdrawal (assign txHash, READY_FOR_SIGNING → SIGNED).
    */
-  async signWithdrawal(orderId: string, adminUser: AuthenticatedUser, txHash: string) {
+  async signWithdrawal(orderId: string, adminUser: AuthenticatedAdmin, txHash: string) {
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.withdrawOrder.findUnique({ where: { id: orderId } });
 
@@ -375,7 +374,7 @@ export class WithdrawalsService {
    * Admin: confirm on-chain settlement (SIGNED → CONFIRMED).
    * Permanently deducts frozen balance via WITHDRAWAL_CONFIRM journal.
    */
-  async confirmWithdrawal(orderId: string, adminUser: AuthenticatedUser) {
+  async confirmWithdrawal(orderId: string, adminUser: AuthenticatedAdmin) {
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.withdrawOrder.findUnique({ where: { id: orderId } });
 
@@ -441,8 +440,10 @@ export class WithdrawalsService {
    * Admin: mark withdrawal as failed (READY_FOR_SIGNING | SIGNED → FAILED).
    * Releases frozen balance back to available.
    */
-  async failWithdrawal(orderId: string, adminUser: AuthenticatedUser, note?: string) {
-    return this.prisma.$transaction(async (tx) => {
+  async failWithdrawal(orderId: string, adminUser: AuthenticatedAdmin, note?: string) {
+    let capturedOrder: WithdrawOrder | null = null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const order = await tx.withdrawOrder.findUnique({ where: { id: orderId } });
 
       if (!order) throw new NotFoundException("Withdrawal order not found");
@@ -452,6 +453,8 @@ export class WithdrawalsService {
       ) {
         throw new BadRequestException("Withdrawal cannot be failed in its current state");
       }
+
+      capturedOrder = order;
 
       const walletAccount = await tx.walletAccount.findUnique({
         where: {
@@ -511,6 +514,23 @@ export class WithdrawalsService {
 
       return updated;
     });
+
+    if (capturedOrder) {
+      const order = capturedOrder as WithdrawOrder;
+      this.prisma.user
+        .findUnique({ where: { id: order.userId }, select: { telegramUserId: true } })
+        .then((u) => {
+          if (u) {
+            this.telegram.sendMessage(
+              u.telegramUserId,
+              this.telegram.msgWithdrawalRejected(order.amount.toString(), order.assetCode, note),
+            );
+          }
+        })
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   /** System: mark order SIGNED after on-chain broadcast. */

@@ -1,3 +1,7 @@
+# Env files with real secrets (only .env and .env.example are tracked)
+backend/.env.testnet
+backend/.env.local
+
 # Logs
 logs
 *.log

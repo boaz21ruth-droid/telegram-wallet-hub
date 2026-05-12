@@ -12,6 +12,12 @@ enum UserRole {
   ADMIN
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  OPS_REVIEWER
+  FINANCE_OPERATOR
+}
+
 enum UserStatus {
   ACTIVE
   SUSPENDED
@@ -84,6 +90,12 @@ enum AuditActorType {
   SYSTEM
 }
 
+enum KycIdType {
+  ID_CARD
+  PASSPORT
+  DRIVER_LICENSE
+}
+
 model User {
   id                 String          @id @default(cuid())
   telegramUserId     String          @unique
@@ -99,10 +111,37 @@ model User {
   outgoingTransfers  TransferOrder[] @relation("OutgoingTransfers")
   incomingTransfers  TransferOrder[] @relation("IncomingTransfers")
   withdrawOrders     WithdrawOrder[] @relation("UserWithdrawOrders")
-  reviewedWithdraws  WithdrawOrder[] @relation("ReviewedWithdrawOrders")
   depositOrders      DepositOrder[]
+  kycApplication     KycApplication?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+}
+
+model AdminAccount {
+  id                 String          @id @default(cuid())
+  username           String          @unique
+  passwordHash       String
+  displayName        String?
+  role               AdminRole       @default(SUPER_ADMIN)
+  isActive           Boolean         @default(true)
+  sessions           AdminSession[]
+  reviewedWithdraws           WithdrawOrder[]    @relation("ReviewedAdminWithdrawOrders")
+  reviewedKycApplications     KycApplication[]   @relation("ReviewedKycApplications")
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+}
+
+model AdminSession {
+  id          String       @id @default(cuid())
+  adminId     String
+  admin       AdminAccount @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([adminId])
 }
 
 model AuthSession {
@@ -138,14 +177,15 @@ model WalletAccount {
 }
 
 model WalletAddress {
-  id              String        @id @default(cuid())
-  walletAccountId String
-  walletAccount   WalletAccount @relation(fields: [walletAccountId], references: [id], onDelete: Cascade)
-  address         String        @unique
-  memo            String?
-  isPrimary       Boolean       @default(false)
-  lastScannedLt   String        @default("0")
-  createdAt       DateTime      @default(now())
+  id                  String        @id @default(cuid())
+  walletAccountId     String
+  walletAccount       WalletAccount @relation(fields: [walletAccountId], references: [id], onDelete: Cascade)
+  address             String        @unique
+  memo                String?
+  isPrimary           Boolean       @default(false)
+  lastScannedLt       String        @default("0")
+  jettonWalletAddress String?
+  createdAt           DateTime      @default(now())
 }
 
 model LedgerJournal {
@@ -215,7 +255,7 @@ model WithdrawOrder {
   reviewStatus         ReviewStatus   @default(PENDING)
   status               WithdrawStatus @default(PENDING_REVIEW)
   reviewerId           String?
-  reviewer             User?          @relation("ReviewedWithdrawOrders", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewer             AdminAccount?  @relation("ReviewedAdminWithdrawOrders", fields: [reviewerId], references: [id], onDelete: SetNull)
   reviewerNote         String?
   reviewedAt           DateTime?
   txHash               String?
@@ -252,6 +292,27 @@ model DepositOrder {
 model DepositAddressCounter {
   id        String @id   // network name: "TON" or "TRC20"
   nextIndex Int    @default(1)
+}
+
+model KycApplication {
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  realName       String
+  idType         KycIdType
+  idNumber       String
+  country        String
+  birthDate      DateTime      @db.Date
+  frontImagePath String
+  backImagePath  String?
+  reviewerId     String?
+  reviewer       AdminAccount? @relation("ReviewedKycApplications", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewerNote   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([reviewerId])
 }
 
 model AuditLog {

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { AuditActorType, UserStatus } from "@prisma/client";
 
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { AuthenticatedAdmin } from "../../common/types/authenticated-admin";
 
 const USER_SELECT = {
   id: true,
@@ -68,7 +68,7 @@ export class UsersService {
     return user;
   }
 
-  async updateUserStatus(targetUserId: string, status: UserStatus, adminUser: AuthenticatedUser) {
+  async updateUserStatus(targetUserId: string, status: UserStatus, adminUser: AuthenticatedAdmin) {
     const user = await this.prisma.user.findUnique({ where: { id: targetUserId } });
     if (!user) throw new NotFoundException("User not found");
 

@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { AuditActorType } from "@prisma/client";
+import { AuditActorType, WithdrawStatus } from "@prisma/client";
 import { randomUUID } from "crypto";
 
 import { getSupportedAssetOrThrow } from "../../config/supported-assets";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { AuthenticatedAdmin } from "../../common/types/authenticated-admin";
 import { parseDecimal } from "../../common/utils/decimal.util";
 import { LedgerService } from "../ledger/ledger.service";
 
@@ -16,7 +16,7 @@ export class WalletAdminService {
   ) {}
 
   async createAdjustment(
-    adminUser: AuthenticatedUser,
+    adminUser: AuthenticatedAdmin,
     dto: {
       telegramUserId: string;
       assetCode: string;
@@ -71,7 +71,7 @@ export class WalletAdminService {
         assetCode: dto.assetCode,
         network: dto.network,
         delta,
-        description: dto.note ?? `Admin adjustment by ${adminUser.telegramUserId}`,
+        description: dto.note ?? `Admin adjustment by ${adminUser.username}`,
       });
 
       await tx.auditLog.create({
@@ -96,5 +96,32 @@ export class WalletAdminService {
       take: limit,
       skip: offset,
     });
+  }
+
+  async getDashboardStats() {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const [
+      pendingReviewCount,
+      readyToSignCount,
+      failedWithdrawalsCount,
+      todayDepositsCount,
+      todayAuditLogsCount,
+    ] = await Promise.all([
+      this.prisma.withdrawOrder.count({ where: { status: WithdrawStatus.PENDING_REVIEW } }),
+      this.prisma.withdrawOrder.count({ where: { status: WithdrawStatus.READY_FOR_SIGNING } }),
+      this.prisma.withdrawOrder.count({ where: { status: WithdrawStatus.FAILED } }),
+      this.prisma.depositOrder.count({ where: { createdAt: { gte: startOfDay } } }),
+      this.prisma.auditLog.count({ where: { createdAt: { gte: startOfDay } } }),
+    ]);
+
+    return {
+      pendingReviewCount,
+      readyToSignCount,
+      failedWithdrawalsCount,
+      todayDepositsCount,
+      todayAuditLogsCount,
+    };
   }
 }

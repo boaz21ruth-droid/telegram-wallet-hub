@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Index from "@/pages/Index";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const DEV_USERS = [
   { id: "user1", label: "测试用户 1", emoji: "👤" },
   { id: "user2", label: "测试用户 2", emoji: "👥" },
-  { id: "admin1", label: "管理员",    emoji: "🔧" },
 ];
 
 function DevLoginScreen() {
@@ -27,44 +27,42 @@ function DevLoginScreen() {
     try {
       await devLogin(userId);
     } catch {
-      setError("登录失败，请确认后端已启动（npm run start:dev）");
+      setError("登录失败，请确认后端已启动（backend: npm run start:dev）");
       setLoading(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-8">
       <div className="text-center">
-        <div className="text-5xl mb-3">💎</div>
+        <div className="mb-3 text-5xl">💎</div>
         <h1 className="text-xl font-bold text-foreground">Telegram 钱包</h1>
-        <p className="text-sm text-muted-foreground mt-1">开发模式</p>
+        <p className="mt-1 text-sm text-muted-foreground">开发模式</p>
       </div>
 
-      <div className="w-full max-w-xs flex flex-col gap-3">
-        {DEV_USERS.map((u) => (
+      <div className="flex w-full max-w-xs flex-col gap-3">
+        {DEV_USERS.map((user) => (
           <button
-            key={u.id}
-            onClick={() => handleLogin(u.id)}
+            key={user.id}
+            onClick={() => void handleLogin(user.id)}
             disabled={loading !== null}
-            className="flex items-center gap-3 rounded-2xl bg-secondary/70 hover:bg-secondary px-5 py-4 text-left transition-colors disabled:opacity-50"
+            className="flex items-center gap-3 rounded-2xl bg-secondary/70 px-5 py-4 text-left transition-colors hover:bg-secondary disabled:opacity-50"
           >
-            <span className="text-2xl">{u.emoji}</span>
+            <span className="text-2xl">{user.emoji}</span>
             <div>
-              <p className="text-sm font-semibold text-foreground">{u.label}</p>
-              <p className="text-xs text-muted-foreground">dev_{u.id}</p>
+              <p className="text-sm font-semibold text-foreground">{user.label}</p>
+              <p className="text-xs text-muted-foreground">dev_{user.id}</p>
             </div>
-            {loading === u.id && (
-              <span className="ml-auto text-xs text-muted-foreground animate-pulse">登录中…</span>
+            {loading === user.id && (
+              <span className="ml-auto animate-pulse text-xs text-muted-foreground">登录中…</span>
             )}
           </button>
         ))}
       </div>
 
-      {error && (
-        <p className="text-xs text-destructive text-center max-w-xs">{error}</p>
-      )}
+      {error && <p className="max-w-xs text-center text-xs text-destructive">{error}</p>}
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-center text-xs text-muted-foreground">
         仅本地开发可用，生产环境通过 Telegram 登录
       </p>
     </div>
@@ -76,8 +74,8 @@ function AppRoutes() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-4xl animate-pulse">💎</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="animate-pulse text-4xl">💎</div>
       </div>
     );
   }

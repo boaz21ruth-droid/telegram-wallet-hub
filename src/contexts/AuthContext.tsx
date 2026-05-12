@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useCallback,
@@ -6,7 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { authApi, clearToken, setToken, type User } from "@/lib/api";
+
+import { authApi, clearUserToken, hasUserToken, setUserToken, type User } from "@/lib/api";
 
 interface AuthState {
   user: User | null;
@@ -24,21 +26,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: restore session from localStorage
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
+    if (!hasUserToken()) {
       setIsLoading(false);
       return;
     }
     authApi
       .me()
       .then(setUser)
-      .catch(() => clearToken())
+      .catch(() => clearUserToken())
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Auto-login via Telegram initData when available
   useEffect(() => {
     if (user || isLoading) return;
     const initData = window.Telegram?.WebApp?.initData;
@@ -46,35 +45,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     authApi
       .login(initData)
-      .then(({ accessToken, user: u }) => {
-        setToken(accessToken);
-        setUser(u);
+      .then(({ accessToken, user: nextUser }) => {
+        setUserToken(accessToken);
+        setUser(nextUser);
       })
       .catch(console.error);
   }, [user, isLoading]);
 
   const login = useCallback(async (initData: string) => {
-    const { accessToken, user: u } = await authApi.login(initData);
-    setToken(accessToken);
-    setUser(u);
+    const { accessToken, user: nextUser } = await authApi.login(initData);
+    setUserToken(accessToken);
+    setUser(nextUser);
   }, []);
 
-  // Dev helper: paste a token obtained via curl / Telegram
   const setDevToken = useCallback(async (token: string) => {
-    setToken(token);
-    const u = await authApi.me();
-    setUser(u);
+    setUserToken(token);
+    const nextUser = await authApi.me();
+    setUser(nextUser);
   }, []);
 
   const devLogin = useCallback(async (userId: string) => {
-    const { accessToken, user: u } = await authApi.devLogin(userId);
-    setToken(accessToken);
-    setUser(u);
+    const { accessToken, user: nextUser } = await authApi.devLogin(userId);
+    setUserToken(accessToken);
+    setUser(nextUser);
   }, []);
 
   const logout = useCallback(async () => {
     await authApi.logout().catch(() => {});
-    clearToken();
+    clearUserToken();
     setUser(null);
   }, []);
 
@@ -93,7 +91,6 @@ export function useAuth() {
   return ctx;
 }
 
-// Augment Window for Telegram WebApp
 declare global {
   interface Window {
     Telegram?: {

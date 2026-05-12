@@ -1,22 +1,29 @@
 import { BadRequestException, Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { CurrentAdmin } from "../../common/decorators/current-admin.decorator";
+import { Public } from "../../common/decorators/public.decorator";
 import { AdminGuard } from "../../common/guards/admin.guard";
-import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { AuthenticatedAdmin } from "../../common/types/authenticated-admin";
 import { CreateAdjustmentDto } from "./dto/create-adjustment.dto";
 import { WalletAdminService } from "./wallet-admin.service";
 
 @Controller("admin/wallet")
+@Public()
 @UseGuards(AdminGuard)
 export class AdminWalletController {
   constructor(private readonly walletAdminService: WalletAdminService) {}
 
   @Post("adjustments")
   async createAdjustment(
-    @CurrentUser() admin: AuthenticatedUser,
+    @CurrentAdmin() admin: AuthenticatedAdmin,
     @Body() body: CreateAdjustmentDto,
   ) {
     return this.walletAdminService.createAdjustment(admin, body);
+  }
+
+  @Get("stats")
+  async getDashboardStats() {
+    return this.walletAdminService.getDashboardStats();
   }
 
   @Get("audit-logs")

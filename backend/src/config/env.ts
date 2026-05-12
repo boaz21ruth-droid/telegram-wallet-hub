@@ -1,22 +1,20 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(3001),
+  PORT: z.coerce.number().int().positive().default(7001),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default("2h"),
+  ADMIN_JWT_SECRET: z.string().min(32),
+  ADMIN_JWT_EXPIRES_IN: z.string().default("8h"),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_INIT_DATA_MAX_AGE_SECONDS: z.coerce.number().int().positive().default(86400),
-  ADMIN_TELEGRAM_IDS: z
-    .string()
-    .default("")
-    .transform((value) =>
-      value
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter(Boolean),
-    ),
+  ADMIN_BOOTSTRAP_USERNAME: z.string().trim().min(3).optional(),
+  ADMIN_BOOTSTRAP_PASSWORD: z.string().min(8).optional(),
+  ADMIN_BOOTSTRAP_DISPLAY_NAME: z.string().trim().min(1).optional(),
+  ADMIN_BOOTSTRAP_ROLE: z.enum(["SUPER_ADMIN", "OPS_REVIEWER", "FINANCE_OPERATOR"]).default("SUPER_ADMIN"),
   WITHDRAW_MANUAL_REVIEW_THRESHOLD: z.string().default("1000"),
+  UPLOAD_DIR: z.string().default("./uploads"),
   // TON chain integration
   TONCENTER_API_URL: z.string().url().default("https://toncenter.com/api/v2"),
   TONCENTER_API_KEY: z.string().optional(),

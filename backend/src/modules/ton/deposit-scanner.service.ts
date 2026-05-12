@@ -36,12 +36,20 @@ export class DepositScannerService {
 
     for (const addr of addresses) {
       try {
-        // For USDT accounts, resolve the Jetton wallet address for fraud prevention
+        // For USDT accounts, use cached Jetton wallet address; fall back to RPC only if not cached
         let expectedUsdtJettonWallet: string | null = null;
         if (addr.walletAccount.assetCode === "USDT") {
-          expectedUsdtJettonWallet = await this.tonService.getUsdtJettonWalletAddress(
-            addr.address,
-          );
+          if (addr.jettonWalletAddress) {
+            expectedUsdtJettonWallet = addr.jettonWalletAddress;
+          } else {
+            expectedUsdtJettonWallet = await this.tonService.getUsdtJettonWalletAddress(addr.address);
+            if (expectedUsdtJettonWallet) {
+              await this.prisma.walletAddress.update({
+                where: { id: addr.id },
+                data: { jettonWalletAddress: expectedUsdtJettonWallet },
+              });
+            }
+          }
         }
 
         const deposits = await this.tonService.getNewDeposits(
@@ -88,6 +96,9 @@ export class DepositScannerService {
       } catch (err) {
         this.logger.error(`Scan failed for address ${addr.address}: ${err}`);
       }
+
+      // Throttle requests to avoid hitting TonCenter rate limits
+      await new Promise((r) => setTimeout(r, 200));
     }
   }
 }

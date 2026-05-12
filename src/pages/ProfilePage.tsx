@@ -1,20 +1,22 @@
-import { LogOut, User, Shield, BadgeCheck, Clock, XCircle, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { LogOut, User, BadgeCheck, Clock, XCircle, ChevronRight, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { KycFormSheet } from "@/components/KycFormSheet";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const KYC_META: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
-  NONE:     { label: "未认证",   color: "text-muted-foreground", Icon: User },
-  PENDING:  { label: "审核中",   color: "text-yellow-400",       Icon: Clock },
-  APPROVED: { label: "已认证",   color: "text-green-400",        Icon: BadgeCheck },
-  REJECTED: { label: "认证失败", color: "text-destructive",      Icon: XCircle },
+  UNVERIFIED: { label: "未认证", color: "text-muted-foreground", Icon: User },
+  PENDING: { label: "审核中", color: "text-yellow-400", Icon: Clock },
+  VERIFIED: { label: "已认证", color: "text-green-400", Icon: BadgeCheck },
+  REJECTED: { label: "认证失败", color: "text-destructive", Icon: XCircle },
 };
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
-  ACTIVE:   { label: "正常",   color: "text-green-400" },
-  FROZEN:   { label: "已冻结", color: "text-destructive" },
-  INACTIVE: { label: "未激活", color: "text-muted-foreground" },
+  ACTIVE: { label: "正常", color: "text-green-400" },
+  SUSPENDED: { label: "已暂停", color: "text-yellow-400" },
+  DISABLED: { label: "已禁用", color: "text-destructive" },
 };
 
 function InfoRow({
@@ -72,6 +74,7 @@ function MenuItem({
 
 const ProfilePage = () => {
   const { user, logout } = useAuth();
+  const [kycSheetOpen, setKycSheetOpen] = useState(false);
 
   if (!user) return null;
 
@@ -87,7 +90,7 @@ const ProfilePage = () => {
     .toUpperCase()
     .slice(0, 2);
 
-  const kyc = KYC_META[user.kycStatus] ?? KYC_META.NONE;
+  const kyc = KYC_META[user.kycStatus] ?? KYC_META.UNVERIFIED;
   const status = STATUS_META[user.status] ?? { label: user.status, color: "text-foreground" };
 
   const handleLogout = async () => {
@@ -122,13 +125,6 @@ const ProfilePage = () => {
           )}
         </div>
 
-        {/* Role badge */}
-        {user.role === "ADMIN" && (
-          <div className="flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full">
-            <Shield size={12} />
-            管理员
-          </div>
-        )}
       </div>
 
       {/* Account info */}
@@ -162,6 +158,20 @@ const ProfilePage = () => {
 
       {/* Actions */}
       <div className="mx-6 space-y-3">
+        {(user.kycStatus === "UNVERIFIED" || user.kycStatus === "REJECTED") && (
+          <MenuItem
+            icon={<ShieldCheck size={18} />}
+            label={user.kycStatus === "REJECTED" ? "重新提交 KYC 认证" : "提交 KYC 认证"}
+            onClick={() => setKycSheetOpen(true)}
+          />
+        )}
+        {user.kycStatus === "PENDING" && (
+          <MenuItem
+            icon={<Clock size={18} />}
+            label="KYC 审核中，请等待"
+            onClick={() => {}}
+          />
+        )}
         <MenuItem
           icon={<LogOut size={18} />}
           label="退出登录"
@@ -169,6 +179,8 @@ const ProfilePage = () => {
           destructive
         />
       </div>
+
+      <KycFormSheet open={kycSheetOpen} onOpenChange={setKycSheetOpen} />
 
       <p className="text-center text-xs text-muted-foreground mt-8 px-6">
         Telegram Wallet · 安全托管

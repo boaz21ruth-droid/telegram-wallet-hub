@@ -26,7 +26,6 @@ export class AuthService {
       env().TELEGRAM_INIT_DATA_MAX_AGE_SECONDS,
     );
     const telegramUserId = validated.user.id;
-    const role = env().ADMIN_TELEGRAM_IDS.includes(telegramUserId) ? UserRole.ADMIN : UserRole.USER;
 
     const { user, session } = await this.prisma.$transaction(async (tx) => {
       const userRecord = await tx.user.upsert({
@@ -36,7 +35,6 @@ export class AuthService {
           firstName: validated.user.first_name,
           lastName: validated.user.last_name,
           photoUrl: validated.user.photo_url,
-          role,
         },
         create: {
           telegramUserId,
@@ -44,7 +42,7 @@ export class AuthService {
           firstName: validated.user.first_name,
           lastName: validated.user.last_name,
           photoUrl: validated.user.photo_url,
-          role,
+          role: UserRole.USER,
         },
       });
 
@@ -118,8 +116,6 @@ export class AuthService {
     }
 
     const telegramUserId = `dev_${testUserId}`;
-    const isAdmin = env().ADMIN_TELEGRAM_IDS.includes(telegramUserId);
-    const role = isAdmin ? UserRole.ADMIN : UserRole.USER;
 
     const { user, session } = await this.prisma.$transaction(async (tx) => {
       const userRecord = await tx.user.upsert({
@@ -130,7 +126,7 @@ export class AuthService {
           firstName: `Dev`,
           lastName: testUserId,
           username: `dev_${testUserId}`,
-          role,
+          role: UserRole.USER,
         },
       });
 

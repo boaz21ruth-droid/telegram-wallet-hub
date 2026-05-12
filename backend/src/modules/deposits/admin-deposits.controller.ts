@@ -1,14 +1,16 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { CurrentAdmin } from "../../common/decorators/current-admin.decorator";
+import { Public } from "../../common/decorators/public.decorator";
 import { AdminGuard } from "../../common/guards/admin.guard";
-import { AuthenticatedUser } from "../../common/types/authenticated-user";
+import { AuthenticatedAdmin } from "../../common/types/authenticated-admin";
 import { AssignDepositAddressDto } from "./dto/assign-deposit-address.dto";
 import { CreditDepositDto } from "./dto/credit-deposit.dto";
 import { ListDepositsQueryDto } from "./dto/list-deposits-query.dto";
 import { DepositsService } from "./deposits.service";
 
 @Controller("admin/deposits")
+@Public()
 @UseGuards(AdminGuard)
 export class AdminDepositsController {
   constructor(private readonly depositsService: DepositsService) {}
@@ -19,12 +21,12 @@ export class AdminDepositsController {
   }
 
   @Post("credit")
-  async credit(@CurrentUser() user: AuthenticatedUser, @Body() body: CreditDepositDto) {
+  async credit(@CurrentAdmin() user: AuthenticatedAdmin, @Body() body: CreditDepositDto) {
     return this.depositsService.creditDeposit(user, body);
   }
 
   @Post("addresses")
-  async assignAddress(@CurrentUser() user: AuthenticatedUser, @Body() body: AssignDepositAddressDto) {
+  async assignAddress(@CurrentAdmin() user: AuthenticatedAdmin, @Body() body: AssignDepositAddressDto) {
     return this.depositsService.assignDepositAddress(user, body);
   }
 }

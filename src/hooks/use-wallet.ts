@@ -19,11 +19,9 @@ export function useWalletAccounts() {
 }
 
 export function useSupportedAssets() {
-  const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ["wallet", "assets"],
     queryFn: walletApi.assets,
-    enabled: isAuthenticated,
   });
 }
 

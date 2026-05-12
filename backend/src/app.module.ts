@@ -9,6 +9,7 @@ import { PrismaService } from "./common/prisma/prisma.service";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { HealthModule } from "./modules/health/health.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { AdminAuthModule } from "./modules/admin-auth/admin-auth.module";
 import { UsersModule } from "./modules/users/users.module";
 import { WalletModule } from "./modules/wallet/wallet.module";
 import { LedgerModule } from "./modules/ledger/ledger.module";
@@ -18,6 +19,7 @@ import { WithdrawalsModule } from "./modules/withdrawals/withdrawals.module";
 import { TonModule } from "./modules/ton/ton.module";
 import { Trc20Module } from "./modules/trc20/trc20.module";
 import { TelegramNotificationModule } from "./common/telegram/telegram-notification.module";
+import { KycModule } from "./modules/kyc/kyc.module";
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { TelegramNotificationModule } from "./common/telegram/telegram-notificat
     }),
     HealthModule,
     AuthModule,
+    AdminAuthModule,
     UsersModule,
     WalletModule,
     LedgerModule,
@@ -41,6 +44,7 @@ import { TelegramNotificationModule } from "./common/telegram/telegram-notificat
     ScheduleModule.forRoot(),
     TonModule,
     Trc20Module,
+    KycModule,
   ],
   providers: [
     {
