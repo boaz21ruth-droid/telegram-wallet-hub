@@ -213,4 +213,36 @@ export class FiatOnrampService {
       orderBy: { sortOrder: "asc" },
     });
   }
+
+  async adminListPaymentMethods() {
+    return this.prisma.fiatPaymentMethod.findMany({ orderBy: { sortOrder: "asc" } });
+  }
+
+  async adminCreatePaymentMethod(dto: {
+    code: string;
+    displayName: string;
+    accountName: string;
+    accountNumber: string;
+    isActive?: boolean;
+    sortOrder?: number;
+  }) {
+    return this.prisma.fiatPaymentMethod.create({ data: dto });
+  }
+
+  async adminUpdatePaymentMethod(
+    id: string,
+    dto: {
+      displayName?: string;
+      accountName?: string;
+      accountNumber?: string;
+      isActive?: boolean;
+      sortOrder?: number;
+    },
+  ) {
+    return this.prisma.fiatPaymentMethod.update({ where: { id }, data: dto });
+  }
+
+  async adminDeletePaymentMethod(id: string) {
+    await this.prisma.fiatPaymentMethod.delete({ where: { id } });
+  }
 }
