@@ -279,6 +279,36 @@ export const adminApi = {
         method: "POST",
         body: JSON.stringify({ reviewerNote }),
       }),
+    paymentMethods: () =>
+      adminRequest<FiatPaymentMethod[]>("/admin/fiat-onramp/payment-methods"),
+    createPaymentMethod: (body: {
+      code: string;
+      displayName: string;
+      accountName: string;
+      accountNumber: string;
+      isActive?: boolean;
+      sortOrder?: number;
+    }) =>
+      adminRequest<FiatPaymentMethod>("/admin/fiat-onramp/payment-methods", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    updatePaymentMethod: (
+      id: string,
+      body: {
+        displayName?: string;
+        accountName?: string;
+        accountNumber?: string;
+        isActive?: boolean;
+        sortOrder?: number;
+      },
+    ) =>
+      adminRequest<FiatPaymentMethod>(`/admin/fiat-onramp/payment-methods/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    deletePaymentMethod: (id: string) =>
+      adminRequest<void>(`/admin/fiat-onramp/payment-methods/${id}`, { method: "DELETE" }),
   },
   wallet: {
     stats: () => adminRequest<AdminDashboardStats>("/admin/wallet/stats"),
@@ -294,6 +324,44 @@ export const adminApi = {
       if (params.resourceType) search.set("resourceType", params.resourceType);
       const query = search.toString();
       return adminRequest<AuditLogRecord[]>(`/admin/wallet/audit-logs${query ? `?${query}` : ""}`);
+    },
+  },
+  staking: {
+    products: () => adminRequest<StakingProduct[]>("/admin/staking/products"),
+    createProduct: (body: {
+      name: string;
+      assetCode: string;
+      network: string;
+      productType: StakingProductType;
+      minAmount: string;
+      lockDays?: number;
+      currentApy?: string;
+      description?: string;
+    }) =>
+      adminRequest<StakingProduct>("/admin/staking/products", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    updateProduct: (id: string, body: { name?: string; currentApy?: string; isActive?: boolean }) =>
+      adminRequest<StakingProduct>(`/admin/staking/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    orders: (
+      params: {
+        status?: StakingOrderStatus;
+        userId?: string;
+        limit?: number;
+        offset?: number;
+      } = {},
+    ) => {
+      const q = new URLSearchParams();
+      if (params.status) q.set("status", params.status);
+      if (params.userId) q.set("userId", params.userId);
+      if (params.limit) q.set("limit", String(params.limit));
+      if (params.offset) q.set("offset", String(params.offset));
+      const qs = q.toString();
+      return adminRequest<AdminStakingOrder[]>(`/admin/staking/orders${qs ? `?${qs}` : ""}`);
     },
   },
 };
@@ -537,6 +605,21 @@ export interface FiatQuote {
   feeAmount: string;
   cryptoAmount: string;
   feeRate: string;
+}
+
+export interface AdminStakingOrder {
+  id: string;
+  userId: string;
+  productId: string;
+  assetCode: string;
+  network: string;
+  principal: string;
+  accruedYield: string;
+  status: StakingOrderStatus;
+  maturesAt: string | null;
+  createdAt: string;
+  user: { id: string; telegramUserId: string; username: string | null };
+  product: StakingProduct;
 }
 
 export interface FiatPaymentMethod {
