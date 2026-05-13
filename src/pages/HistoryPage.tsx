@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { ArrowUpRight, ArrowDownLeft, ArrowUpFromLine, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, ArrowUpFromLine, Clock, CheckCircle2, XCircle, AlertCircle, Repeat2, Banknote } from "lucide-react";
 import { useTransfers, useWithdrawals, useDeposits } from "@/hooks/use-wallet";
-import type { TransferOrder, WithdrawOrder, DepositOrder } from "@/lib/api";
+import { useSwapOrders } from "@/hooks/use-swap";
+import { useFiatOrders } from "@/hooks/use-fiat-onramp";
+import type { TransferOrder, WithdrawOrder, DepositOrder, SwapOrder, FiatOnrampOrder } from "@/lib/api";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,10 +31,15 @@ const STATUS_META: Record<string, { label: string; color: string; Icon: React.El
   CONFIRMED:          { label: "已确认", color: "text-green-400",        Icon: CheckCircle2 },
   PENDING:            { label: "待处理", color: "text-yellow-400",       Icon: Clock },
   PENDING_REVIEW:     { label: "审核中", color: "text-yellow-400",       Icon: Clock },
+  PENDING_PAYMENT:    { label: "待付款", color: "text-yellow-400",       Icon: Clock },
+  PAYMENT_SUBMITTED:  { label: "已上传", color: "text-blue-400",         Icon: AlertCircle },
+  UNDER_REVIEW:       { label: "审核中", color: "text-yellow-400",       Icon: Clock },
   APPROVED:           { label: "已批准", color: "text-blue-400",         Icon: AlertCircle },
   READY_FOR_SIGNING:  { label: "待签名", color: "text-blue-400",         Icon: AlertCircle },
   SIGNED:             { label: "已签名", color: "text-blue-400",         Icon: AlertCircle },
   FAILED:             { label: "失败",   color: "text-destructive",      Icon: XCircle },
+  REJECTED:           { label: "已拒绝", color: "text-destructive",      Icon: XCircle },
+  EXPIRED:            { label: "已过期", color: "text-muted-foreground", Icon: XCircle },
   CANCELLED:          { label: "已取消", color: "text-muted-foreground", Icon: XCircle },
 };
 
@@ -148,6 +155,78 @@ function DepositList() {
   );
 }
 
+function SwapList() {
+  const { data, isLoading } = useSwapOrders();
+  if (isLoading) return <Skeleton />;
+  if (!data?.length) return <Empty text="暂无兑换记录" />;
+  return (
+    <div className="space-y-3">
+      {data.map((s: SwapOrder) => {
+        const isBridge = s.fromAssetCode === s.toAssetCode && s.fromNetwork !== s.toNetwork;
+        const label = isBridge
+          ? `${s.fromAssetCode} ${s.fromNetwork} → ${s.toNetwork}`
+          : `${s.fromAssetCode} → ${s.toAssetCode}`;
+        return (
+          <div key={s.id} className="p-4 rounded-xl bg-secondary/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
+                <Repeat2 size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{label}</p>
+                <p className="text-xs text-muted-foreground">{formatTime(s.createdAt)}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium text-foreground">
+                -{fmtAmount(s.fromAmount, s.fromAssetCode)} {s.fromAssetCode}
+              </p>
+              <p className="text-xs text-green-400">
+                +{fmtAmount(s.toAmount, s.toAssetCode)} {s.toAssetCode}
+              </p>
+              <StatusBadge status={s.status} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FiatList() {
+  const { data, isLoading } = useFiatOrders();
+  if (isLoading) return <Skeleton />;
+  if (!data?.length) return <Empty text="暂无买币记录" />;
+  return (
+    <div className="space-y-3">
+      {data.map((f: FiatOnrampOrder) => (
+        <div key={f.id} className="p-4 rounded-xl bg-secondary/50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-yellow-500/10 text-yellow-500 flex items-center justify-center">
+              <Banknote size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                买币 {f.assetCode}/{f.network}
+              </p>
+              <p className="text-xs text-muted-foreground">{formatTime(f.createdAt)}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-foreground">
+              ¥{parseFloat(f.fiatAmount).toFixed(2)}
+            </p>
+            <p className="text-xs text-green-400">
+              +{parseFloat(f.cryptoAmount).toFixed(2)} {f.assetCode}
+            </p>
+            <StatusBadge status={f.status} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── shared tiny components ────────────────────────────────────────────────────
 
 function Skeleton() {
@@ -170,6 +249,8 @@ const TABS = [
   { label: "转账", Component: TransferList },
   { label: "提现", Component: WithdrawList },
   { label: "充值", Component: DepositList },
+  { label: "兑换", Component: SwapList },
+  { label: "买币", Component: FiatList },
 ];
 
 const HistoryPage = () => {

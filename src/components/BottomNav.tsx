@@ -1,9 +1,10 @@
-import { Wallet, BarChart3, Repeat, User } from "lucide-react";
+import { Wallet, BarChart3, Repeat, PiggyBank, User } from "lucide-react";
 
 const NAV_ITEMS = [
   { icon: Wallet,    label: "钱包" },
   { icon: BarChart3, label: "行情" },
   { icon: Repeat,    label: "交易" },
+  { icon: PiggyBank, label: "理财" },
   { icon: User,      label: "我的" },
 ];
 

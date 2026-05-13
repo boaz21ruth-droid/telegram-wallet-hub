@@ -1,4 +1,4 @@
-import { Building2, CreditCard, FileClock, LayoutDashboard, LogOut, ShieldCheck, Users, Wallet } from "lucide-react";
+import { Banknote, Building2, CreditCard, FileClock, LayoutDashboard, LogOut, ShieldCheck, Users, Wallet } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const NAV_ITEMS: Array<{
   { to: "/users", label: "用户管理", permission: "users:view", Icon: Users },
   { to: "/deposits", label: "充值管理", permission: "deposits:view", Icon: CreditCard },
   { to: "/withdrawals", label: "提现工作台", permission: "withdrawals:view", Icon: Wallet },
+  { to: "/fiat-onramp", label: "法币买币审核", permission: "fiat-onramp:view", Icon: Banknote },
   { to: "/adjustments", label: "钱包调账", permission: "adjustments:view", Icon: Building2 },
   { to: "/audit-logs", label: "审计日志", permission: "audit:view", Icon: FileClock },
 ];
