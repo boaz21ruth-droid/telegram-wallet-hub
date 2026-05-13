@@ -15,6 +15,20 @@ describe("admin permissions", () => {
   });
 });
 
+describe("new permissions", () => {
+  it("allows staking:view for all roles", () => {
+    expect(hasAdminPermission("SUPER_ADMIN", "staking:view")).toBe(true);
+    expect(hasAdminPermission("OPS_REVIEWER", "staking:view")).toBe(true);
+    expect(hasAdminPermission("FINANCE_OPERATOR", "staking:view")).toBe(true);
+  });
+
+  it("restricts payment-methods:manage to super admin and finance operator", () => {
+    expect(hasAdminPermission("SUPER_ADMIN", "payment-methods:manage")).toBe(true);
+    expect(hasAdminPermission("FINANCE_OPERATOR", "payment-methods:manage")).toBe(true);
+    expect(hasAdminPermission("OPS_REVIEWER", "payment-methods:manage")).toBe(false);
+  });
+});
+
 describe("format helpers", () => {
   it("prefers full name and falls back to username or telegram id", () => {
     expect(formatDisplayName({ firstName: "Ada", lastName: "Lovelace" })).toBe("Ada Lovelace");
