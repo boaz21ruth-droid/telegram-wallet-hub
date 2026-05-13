@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
-import { IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 import { Public } from "../../common/decorators/public.decorator";
 import { AdminGuard } from "../../common/guards/admin.guard";
 import { CurrentAdmin } from "../../common/decorators/current-admin.decorator";
@@ -18,10 +18,10 @@ import { ReviewFiatOrderDto } from "./dto/review-fiat-order.dto";
 import { FiatOnrampService } from "./fiat-onramp.service";
 
 class CreatePaymentMethodDto {
-  @IsString() code!: string;
-  @IsString() displayName!: string;
-  @IsString() accountName!: string;
-  @IsString() accountNumber!: string;
+  @IsString() @IsNotEmpty() code!: string;
+  @IsString() @IsNotEmpty() displayName!: string;
+  @IsString() @IsNotEmpty() accountName!: string;
+  @IsString() @IsNotEmpty() accountNumber!: string;
   @IsBoolean() @IsOptional() isActive?: boolean;
   @IsNumber() @IsOptional() sortOrder?: number;
 }

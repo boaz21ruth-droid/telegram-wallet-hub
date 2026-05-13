@@ -239,10 +239,14 @@ export class FiatOnrampService {
       sortOrder?: number;
     },
   ) {
+    const existing = await this.prisma.fiatPaymentMethod.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("Payment method not found");
     return this.prisma.fiatPaymentMethod.update({ where: { id }, data: dto });
   }
 
   async adminDeletePaymentMethod(id: string) {
+    const existing = await this.prisma.fiatPaymentMethod.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("Payment method not found");
     await this.prisma.fiatPaymentMethod.delete({ where: { id } });
   }
 }
