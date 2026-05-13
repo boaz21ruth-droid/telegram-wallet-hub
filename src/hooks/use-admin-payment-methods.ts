@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { adminApi } from "@/lib/api";
 
 export function useAdminPaymentMethods() {
+  const { isAuthenticated } = useAdminAuth();
   return useQuery({
     queryKey: ["admin", "payment-methods"],
     queryFn: () => adminApi.fiatOnramp.paymentMethods(),
+    enabled: isAuthenticated,
   });
 }
 
