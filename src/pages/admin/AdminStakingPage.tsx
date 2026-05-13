@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { PiggyBank, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -24,24 +25,16 @@ function ProductCard({ product }: { product: StakingProduct }) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(product.name);
   const [apy, setApy] = useState(product.currentApy);
+  const [isActive, setIsActive] = useState(product.isActive);
   const update = useUpdateStakingProduct();
 
   const handleSave = async () => {
     try {
-      await update.mutateAsync({ id: product.id, body: { name, currentApy: apy } });
+      await update.mutateAsync({ id: product.id, body: { name, currentApy: apy, isActive } });
       toast.success("已更新");
       setExpanded(false);
     } catch {
       toast.error("更新失败");
-    }
-  };
-
-  const handleToggle = async () => {
-    try {
-      await update.mutateAsync({ id: product.id, body: { isActive: !product.isActive } });
-      toast.success(product.isActive ? "已停用" : "已启用");
-    } catch {
-      toast.error("操作失败");
     }
   };
 
@@ -110,6 +103,12 @@ function ProductCard({ product }: { product: StakingProduct }) {
               />
             </div>
           </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <span className="text-xs text-muted-foreground">
+              {isActive ? "启用" : "停用"}
+            </span>
+          </div>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -118,19 +117,6 @@ function ProductCard({ product }: { product: StakingProduct }) {
               className="flex-1"
             >
               保存
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleToggle}
-              disabled={update.isPending}
-              className={
-                product.isActive
-                  ? "text-destructive border-destructive/30 hover:bg-destructive/10"
-                  : ""
-              }
-            >
-              {product.isActive ? "停用" : "启用"}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
               取消
