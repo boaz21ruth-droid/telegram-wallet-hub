@@ -94,7 +94,7 @@ function makePrisma(product: ReturnType<typeof makeProduct> | null, account: Ret
       findMany: mock.fn(async () => [makeOrder()]),
       aggregate: mock.fn(async () => ({ _sum: { principal: new Prisma.Decimal("0") } })),
     },
-    $transaction: mock.fn(async (fn: (tx: typeof tx) => Promise<unknown>) => fn(tx)),
+    $transaction: mock.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx)),
   };
 }
 
