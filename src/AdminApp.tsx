@@ -17,6 +17,8 @@ import AdminUsersPage from "@/pages/admin/AdminUsersPage";
 import AdminWithdrawalDetailPage from "@/pages/admin/AdminWithdrawalDetailPage";
 import AdminWithdrawalsPage from "@/pages/admin/AdminWithdrawalsPage";
 import AdminFiatOnrampPage from "@/pages/admin/AdminFiatOnrampPage";
+import AdminPaymentMethodsPage from "@/pages/admin/AdminPaymentMethodsPage";
+import AdminStakingPage from "@/pages/admin/AdminStakingPage";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +56,12 @@ function AdminAppRoutes() {
             </Route>
             <Route element={<RequireAdmin permission="fiat-onramp:view" />}>
               <Route path="/fiat-onramp" element={<AdminFiatOnrampPage />} />
+            </Route>
+            <Route element={<RequireAdmin permission="staking:view" />}>
+              <Route path="/staking" element={<AdminStakingPage />} />
+            </Route>
+            <Route element={<RequireAdmin permission="payment-methods:manage" />}>
+              <Route path="/payment-methods" element={<AdminPaymentMethodsPage />} />
             </Route>
             <Route element={<RequireAdmin permission="adjustments:view" />}>
               <Route path="/adjustments" element={<AdminAdjustmentsPage />} />

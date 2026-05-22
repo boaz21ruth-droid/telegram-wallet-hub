@@ -1,0 +1,161 @@
+<h2>质押管理页 — 选择布局方案</h2>
+<p class="subtitle">AdminStakingPage 需要同时管理「产品配置」和「用户订单」，哪种结构更合适？</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav" style="font-size:11px;padding:6px 10px;">管理员控制台 › 质押管理</div>
+      <div class="mockup-body" style="padding:10px;display:flex;flex-direction:column;gap:8px;">
+        <!-- Tabs -->
+        <div style="display:flex;gap:4px;border-bottom:2px solid #334155;padding-bottom:6px;">
+          <div style="background:#6366f1;color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;">质押产品</div>
+          <div style="background:#1e293b;color:#94a3b8;padding:4px 12px;border-radius:4px;font-size:11px;">用户订单</div>
+        </div>
+        <!-- Product table -->
+        <div style="background:#1e293b;border-radius:6px;padding:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;color:#94a3b8;">3 个产品</span>
+            <div style="background:#6366f1;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;">+ 新建</div>
+          </div>
+          <div style="background:#0f172a;border-radius:4px;padding:6px;font-size:10px;color:#e2e8f0;display:flex;justify-content:space-between;margin-bottom:3px;">
+            <span>USDT 活期理财</span><span style="color:#4ade80;">4.2% APY</span><span style="color:#94a3b8;">启用</span>
+          </div>
+          <div style="background:#0f172a;border-radius:4px;padding:6px;font-size:10px;color:#e2e8f0;display:flex;justify-content:space-between;margin-bottom:3px;">
+            <span>TON 90天定期</span><span style="color:#4ade80;">8.5% APY</span><span style="color:#94a3b8;">启用</span>
+          </div>
+          <div style="background:#0f172a;border-radius:4px;padding:6px;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;">
+            <span>USDT 固定30天</span><span style="color:#4ade80;">6.0% APY</span><span style="color:#f59e0b;">停用</span>
+          </div>
+        </div>
+        <!-- Create form below -->
+        <div style="background:#1e293b;border-radius:6px;padding:8px;">
+          <div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">新建产品</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <div class="mock-input" style="font-size:9px;padding:3px 6px;">产品名称</div>
+            <div class="mock-input" style="font-size:9px;padding:3px 6px;">APY %</div>
+            <div class="mock-input" style="font-size:9px;padding:3px 6px;">资产 / 网络</div>
+            <div class="mock-input" style="font-size:9px;padding:3px 6px;">锁仓天数</div>
+          </div>
+          <div class="mock-button" style="margin-top:4px;font-size:9px;padding:3px 0;text-align:center;width:100%;">创建产品</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Tab 分页 + 内嵌表单</h3>
+      <p>产品管理与订单查看分 Tab，当前 Tab 下方显示新建表单。切换清晰，但 Tab 间上下文割裂。</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav" style="font-size:11px;padding:6px 10px;">管理员控制台 › 质押管理</div>
+      <div class="mockup-body" style="padding:10px;display:flex;flex-direction:column;gap:8px;">
+        <!-- Products section -->
+        <div style="background:#1e293b;border-radius:6px;padding:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;font-weight:600;color:#e2e8f0;">质押产品配置</span>
+            <div style="background:#6366f1;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;">+ 新建</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div style="flex:1;background:#0f172a;border-radius:4px;padding:6px;font-size:10px;">
+              <div style="color:#e2e8f0;font-weight:600;">USDT 活期</div>
+              <div style="color:#4ade80;font-size:9px;">APY 4.2%</div>
+              <div style="color:#94a3b8;font-size:9px;">最低 10 USDT</div>
+              <div style="color:#4ade80;font-size:9px;margin-top:2px;">● 启用</div>
+            </div>
+            <div style="flex:1;background:#0f172a;border-radius:4px;padding:6px;font-size:10px;">
+              <div style="color:#e2e8f0;font-weight:600;">TON 定期90天</div>
+              <div style="color:#4ade80;font-size:9px;">APY 8.5%</div>
+              <div style="color:#94a3b8;font-size:9px;">最低 50 TON</div>
+              <div style="color:#4ade80;font-size:9px;margin-top:2px;">● 启用</div>
+            </div>
+            <div style="flex:1;background:#0f172a;border-radius:4px;padding:6px;font-size:10px;opacity:0.5;">
+              <div style="color:#e2e8f0;font-weight:600;">USDT 固定30天</div>
+              <div style="color:#4ade80;font-size:9px;">APY 6.0%</div>
+              <div style="color:#94a3b8;font-size:9px;">最低 100 USDT</div>
+              <div style="color:#f59e0b;font-size:9px;margin-top:2px;">○ 停用</div>
+            </div>
+          </div>
+        </div>
+        <!-- Orders section below -->
+        <div style="background:#1e293b;border-radius:6px;padding:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;font-weight:600;color:#e2e8f0;">用户持仓订单</span>
+            <div class="mock-input" style="font-size:9px;padding:2px 6px;width:auto;display:inline-block;">筛选状态</div>
+          </div>
+          <div style="background:#0f172a;border-radius:4px;padding:5px;font-size:9px;color:#e2e8f0;display:flex;justify-content:space-between;margin-bottom:2px;">
+            <span>uid_123 · USDT 活期</span><span>500.00 USDT</span><span style="color:#4ade80;">持仓中</span>
+          </div>
+          <div style="background:#0f172a;border-radius:4px;padding:5px;font-size:9px;color:#e2e8f0;display:flex;justify-content:space-between;margin-bottom:2px;">
+            <span>uid_456 · TON 定期</span><span>200.00 TON</span><span style="color:#4ade80;">持仓中</span>
+          </div>
+          <div style="background:#0f172a;border-radius:4px;padding:5px;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between;">
+            <span>uid_789 · USDT 活期</span><span>80.00 USDT</span><span style="color:#94a3b8;">已赎回</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 上下滚动 — 产品卡片 + 订单表</h3>
+      <p>产品以卡片形式展示（点击可编辑），订单表在下方。一页看全，上下文连贯，适合运营快速浏览。</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mock-nav" style="font-size:11px;padding:6px 10px;">管理员控制台 › 质押管理</div>
+      <div class="mockup-body" style="padding:10px;display:flex;gap:8px;">
+        <!-- Left: product list -->
+        <div style="width:38%;display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:10px;color:#94a3b8;margin-bottom:2px;">产品列表</div>
+          <div style="background:#6366f1;border-radius:4px;padding:6px;font-size:10px;color:#fff;">
+            <div style="font-weight:600;">USDT 活期理财</div>
+            <div style="font-size:9px;opacity:0.8;">4.2% APY · 启用</div>
+          </div>
+          <div style="background:#1e293b;border-radius:4px;padding:6px;font-size:10px;color:#e2e8f0;">
+            <div>TON 定期90天</div>
+            <div style="font-size:9px;color:#94a3b8;">8.5% APY · 启用</div>
+          </div>
+          <div style="background:#1e293b;border-radius:4px;padding:6px;font-size:10px;color:#94a3b8;opacity:0.6;">
+            <div>USDT 固定30天</div>
+            <div style="font-size:9px;">6.0% APY · 停用</div>
+          </div>
+          <div style="border:1px dashed #334155;border-radius:4px;padding:5px;font-size:10px;color:#6366f1;text-align:center;">+ 新建产品</div>
+        </div>
+        <!-- Right: edit panel -->
+        <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px;">
+          <div style="font-size:11px;font-weight:600;color:#e2e8f0;margin-bottom:6px;">编辑：USDT 活期理财</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div class="mock-input" style="font-size:9px;padding:3px 6px;">产品名称</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <div class="mock-input" style="font-size:9px;padding:3px 6px;">APY %</div>
+              <div class="mock-input" style="font-size:9px;padding:3px 6px;">最低金额</div>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:2px;">
+              <div class="mock-button" style="flex:1;font-size:9px;padding:3px 0;text-align:center;">保存</div>
+              <div style="background:#ef4444;color:#fff;border-radius:4px;flex:1;font-size:9px;padding:3px 0;text-align:center;">停用</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;border-top:1px solid #334155;padding-top:6px;">
+            <div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">该产品持仓订单</div>
+            <div style="background:#0f172a;border-radius:4px;padding:4px;font-size:9px;color:#e2e8f0;display:flex;justify-content:space-between;margin-bottom:2px;">
+              <span>uid_123</span><span>500 USDT</span><span style="color:#4ade80;">持仓中</span>
+            </div>
+            <div style="background:#0f172a;border-radius:4px;padding:4px;font-size:9px;color:#e2e8f0;display:flex;justify-content:space-between;">
+              <span>uid_789</span><span>80 USDT</span><span style="color:#94a3b8;">已赎回</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · 主从布局 — 产品列表 + 右侧编辑面板</h3>
+      <p>左侧列出产品，右侧显示选中产品的编辑表单和该产品的订单。适合频繁编辑产品参数的场景。</p>
+    </div>
+  </div>
+
+</div>
